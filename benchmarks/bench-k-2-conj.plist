@@ -1,0 +1,30 @@
+{
+  config = 1;
+  learningsystems = ( dllearner, spell);
+  scenarios = ( 
+  test-hard-deep-conj-1/1,
+  test-hard-deep-conj-2/1,
+  test-hard-deep-conj-3/1,
+  test-hard-deep-conj-4/1,
+  test-hard-deep-conj-5/1,
+  test-hard-deep-conj-6/1,
+  test-hard-deep-conj-7/1,
+  test-hard-deep-conj-8/1,
+  test-hard-deep-conj-9/1,
+  test-hard-deep-conj-10/1,
+  test-hard-deep-conj-11/1,
+  test-hard-deep-conj-12/1,
+  test-hard-deep-conj-13/1,
+  test-hard-deep-conj-14/1,
+  test-hard-deep-conj-15/1,
+  test-hard-deep-conj-16/1,
+  test-hard-deep-conj-17/1,
+  test-hard-deep-conj-18/1
+                );
+  measures = ( pred_acc );
+  framework = {
+    crossValidationFolds = 1;
+    maxExecutionTime = 600;
+  };
+  resultOutput = bench-k-2-conj-result.prop;
+}

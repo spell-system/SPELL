@@ -1,0 +1,18 @@
+{
+  config = 1;
+  learningsystems = ( dllearner, spell );
+  scenarios = ( 
+  owl2bench-1/1,
+  owl2bench-2/1,
+  owl2bench-3/1,
+  owl2bench-4/1,
+  owl2bench-5/1,
+  owl2bench-6/1
+                );
+  measures = ( pred_acc );
+  framework = {
+    crossValidationFolds = 1;
+    maxExecutionTime = 3600;
+  };
+  resultOutput = bench-owl2bench-perf.plist;
+}

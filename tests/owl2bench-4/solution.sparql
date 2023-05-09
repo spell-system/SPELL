@@ -1,0 +1,5 @@
+SELECT DISTINCT ?0 WHERE {
+ ?0 <http://benchmark/OWL2Bench#teachesCourse> ?1 .
+ ?0 a <http://benchmark/OWL2Bench#Woman> .
+ ?1 a <http://benchmark/OWL2Bench#UGCourse> .
+}

@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+
+import sys
+import os
+
+from spell import fitting
+from spell import structures
+
+def read_config(path):
+    settings = {}
+    with open(path) as file:
+        prop_list = [line.split("=") for line in file.readlines()]
+        settings = {key.strip(): value.strip() for key, value in prop_list}
+
+    return settings
+
+config = read_config(sys.argv[1])
+
+
+pos_ex = config["filename.pos"]
+neg_ex = config["filename.neg"]
+target_dir = config['filename.workdir']
+output_file = config['filename.output']
+learning_task_id = config['learningtask']
+learning_problem_id = config['learningproblem']
+learning_task_dir_name = 'learningtasks'
+owl_dir_name = 'owl'
+data_dir_name = 'data'
+data_dir = os.path.join('..', '..', learning_task_dir_name, learning_task_id, owl_dir_name, data_dir_name)
+
+owl_file_path = None
+for file in os.listdir(data_dir):
+    if file.endswith(".owl"):
+        owl_file_path = os.path.join(data_dir, file)
+
+assert owl_file_path
+
+A, indmap, _ = structures.structure_from_owl(owl_file_path)
+
+
+with open(pos_ex, encoding="UTF-8") as file:
+    P = [indmap[line.rstrip()] for line in file.readlines()]
+
+with open(neg_ex, encoding="UTF-8") as file:
+    N = [indmap[line.rstrip()] for line in file.readlines()]
+
+_, best_q = fitting.solve_incr(A, P, N, fitting.mode.exact)
+
+with open(output_file, "w") as file:
+    file.write(structures.solution2sparql(best_q))

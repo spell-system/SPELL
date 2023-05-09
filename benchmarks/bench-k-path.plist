@@ -1,0 +1,30 @@
+{
+  config = 1;
+  learningsystems = ( dllearner, spell);
+  scenarios = ( 
+  test-hard-path-1/1,
+  test-hard-path-2/1,
+  test-hard-path-3/1,
+  test-hard-path-4/1,
+  test-hard-path-5/1,
+  test-hard-path-6/1,
+  test-hard-path-7/1,
+  test-hard-path-8/1,
+  test-hard-path-9/1,
+  test-hard-path-10/1,
+  test-hard-path-11/1,
+  test-hard-path-12/1,
+  test-hard-path-13/1,
+  test-hard-path-14/1,
+  test-hard-path-15/1, 
+  test-hard-path-16/1, 
+  test-hard-path-17/1,
+  test-hard-path-18/1
+                );
+  measures = ( pred_acc );
+  framework = {
+    crossValidationFolds = 1;
+    maxExecutionTime = 600;
+  };
+  resultOutput = bench-k-path-result.prop;
+}

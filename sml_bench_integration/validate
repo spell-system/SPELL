@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+import sys
+import os
+
+from spell import benchmark_tools
+
+def read_config(path):
+    settings = {}
+    with open(path) as file:
+        prop_list = [line.split("=") for line in file.readlines()]
+        settings = {key.strip(): value.strip() for key, value in prop_list}
+
+    return settings
+
+config = read_config(sys.argv[1])
+
+
+input_file = config['filename.input']
+output_file_name = config['filename.output']
+pos_ex = config["filename.pos"]
+neg_ex = config["filename.neg"]
+target_dir = config['filename.workdir']
+# output_file = config['filename.output']
+learning_task_id = config['learningtask']
+learning_problem_id = config['learningproblem']
+learning_task_dir_name = 'learningtasks'
+owl_dir_name = 'owl'
+data_dir_name = 'data'
+data_dir = os.path.join('..', '..', learning_task_dir_name, learning_task_id, owl_dir_name, data_dir_name)
+
+owl_file_path = None
+for file in os.listdir(data_dir):
+    if file.endswith(".owl"):
+        owl_file_path = os.path.join(data_dir, file)
+
+assert owl_file_path
+
+
+with open(pos_ex, encoding="UTF-8") as file:
+    P = [line.rstrip() for line in file.readlines()]
+
+with open(neg_ex, encoding="UTF-8") as file:
+    N = [line.rstrip() for line in file.readlines()]
+
+sparql = ""
+with open(input_file, encoding="UTF-8") as file:
+    for line in file:
+        sparql += line + "\n"
+
+A, indmap, nsmap = benchmark_tools.structure_from_owl(owl_file_path)
+benchmark_tools.construct_owl_from_structure("tmp.owl", A, indmap, nsmap)
+
+result = benchmark_tools.query_owl("tmp.owl", sparql)
+
+pos = set(P)
+neg = set(N)
+
+tp = len(pos.intersection(result))
+fp = len(neg.intersection(result))
+tn = len(neg.difference(result))
+fn = len(pos.difference(result))
+
+with open(output_file_name, 'w') as f:
+    f.write('tp: %i' % tp + os.linesep +
+            'fp: %i' % fp + os.linesep +
+            'tn: %i' % tn + os.linesep +
+            'fn: %i' % fn + os.linesep)
