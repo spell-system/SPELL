@@ -2,23 +2,24 @@
 
 **SPELL** (SAT-bases PAC EL concept Learner) is an implementation of a
 sample-efficient learning algorithm for EL-concepts under ELHr-ontologies.
-That is, it takes as input a knowledge base containing an ontology written in
-the description logic ELHr and lists of individuals from the knowledge base that
-are positive or negative examples. It then outputs (if it exists) an EL-concept
-that fits the examples under the ontology.
+It takes as input a knowledge base (formulated in the description logic ELHr)
+and lists of individuals from that knowledge base that
+are positive or negative examples. 
+It then *learns* an EL-concept that fits the examples with respect to the
+provided background knowledge.
 
 More information on SPELL and the theory behind it is available in the following paper:
 *insert link to paper here*
 
-You can find information on how to reproduce the benchmarks in [benchmarks.md](benchmarks.md)
+You can find instructions on how to reproduce the benchmarks in [benchmarks.md](benchmarks.md)
 
 Contact: Maurice Funk `mfunk@informatik.uni-leipzig.de`
 
 ## Setting up and running SPELL
 
-These instructions were tests with python 3.10.0 on macOS.
+These instructions were tested with python 3.10.9 on macOS.
 
-Create a python virtual enviroment (in order to not install dependencies in the global environment):
+Create a python virtual enviroment (to avoid installing dependencies in the global environment):
 ```
     python -m venv spell-venv
 ```
