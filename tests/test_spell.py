@@ -1,7 +1,7 @@
 import time
 
 from spell.fitting import solve_incr, solve, mode
-from spell.structures import structure_from_owl, Structure
+from spell.structures import ABoxBuilder, compact_canonical_model, structure_from_owl, Structure, structure_to_dot
 from spell.benchmark_tools import execute_sml_bench
 
 
@@ -652,6 +652,57 @@ def test_owl_bench():
 
 # test_owl_bench()
 
+def test_resoning1():
+    from spell.structures import TBox
+
+    t = TBox("top")
+    for i in range(1, 15):
+        t.add_axiom3("A{}".format(i), "r{}".format(i), "top")
+        t.add_range_restriction("r{}".format(i), "A{}".format(i + 1))
+        t.add_role_inc("r{}".format(i), "r")
+
+    t.add_axiom3("A", "s", "A")
+    t.add_role_inc("s", "r")
+    t.add_axiom3("B", "t", "B")
+    t.add_role_inc("t", "r")
+
+    Ab = ABoxBuilder()
+    Ab.concept_assertion(Ab.map_ind("a"), "A")
+    Ab.concept_assertion(Ab.map_ind("a"), "A1")
+    Ab.concept_assertion(Ab.map_ind("b"), "A1")
+    Ab.concept_assertion(Ab.map_ind("c"), "B")
+
+    t.saturate()
+    compact_canonical_model(Ab, t)
+
+    assert solve_incr2(Ab.A, [Ab.indmap["a"], Ab.indmap["c"]], [Ab.indmap["b"]])
+
+def test_resoning2():
+    from spell.structures import TBox
+
+    t = TBox("top")
+    t.add_axiom4("r", "A", "A")
+    t.add_axiom3("A", "s", "A")
+    t.add_role_inc("r", "s")
+    t.add_role_inc("s", "r")
+
+
+    Ab = ABoxBuilder()
+    Ab.declare_rn("s")
+    for i in range(1, 15):
+        Ab.role_assertion(Ab.map_ind("a{}".format(i)), "a{}".format(i + 1), "s")
+
+    Ab.concept_assertion(Ab.map_ind("a14"), "A")
+    Ab.concept_assertion(Ab.map_ind("b"), "A")
+    
+    t.saturate()
+    compact_canonical_model(Ab, t)
+
+    res = solve_incr(Ab.A, [Ab.indmap["a1"]], [Ab.indmap["b"]], mode.exact, max_size=10)
+
+    assert res[0] == 1
+
+# test_resoning()
 
 def test_TBox():
     from spell.structures import TBox
@@ -660,7 +711,8 @@ def test_TBox():
 
     t.add_axiom1("0", "A")
     t.add_axiom3("A", "r", "B")
-    t.add_range_restriction("r", "C")
+    t.add_role_inc("r", "s")
+    t.add_range_restriction("s", "C")
     t.add_axiom2("B", "C", "D")
     t.add_axiom4("r", "D", "E")
     t.add_axiom1("E", "1")

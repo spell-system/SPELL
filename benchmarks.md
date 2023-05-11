@@ -12,12 +12,6 @@ available separately at
  https://github.com/spell-system/benchmarks, but can also be generated using the included benchmark generators.
 
 
-Make sure that the `robot` tool is available in the `robot` directory:
-```
-cd robot
-./get_robot.sh
-cd ..
-```
 
 ## Setting up SML-Bench Framework
 

@@ -31,6 +31,12 @@ Install dependencies:
 ```
     pip install -r requirements.txt
 ```
+Make sure that the `robot` tool is available in the `robot` directory (this is required for some tests):
+```
+cd robot
+./get_robot.sh
+cd ..
+```
 Check that everything works by running the tests:
 ```
     pytest

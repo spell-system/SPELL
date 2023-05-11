@@ -397,7 +397,7 @@ def construct_normalized_tbox(onto: Ontology):
     cis = 0
     onto = onto.normalize()
 
-    # TODO: role hierarchies, functional roles, reasoning rules for ELI, etc
+    # TODO: functional roles, reasoning rules for ELI, etc
     # TODO: inverse roles in ABox
 
     t = TBox(tag2name(expand_namespace("owl", "Thing")))
@@ -575,9 +575,12 @@ def compact_canonical_model(abox: ABoxBuilder, tbox: TBox):
 def structure_to_dot(A: Structure, indmap: dict[str, int]):
     print("digraph D {")
 
+
     for name, val in indmap.items():
         if "#" in name:
             print('N{} [label="{}"];'.format(val, name.split("#")[1]))
+        else:
+            print('N{} [label="{}"];'.format(val, name))
 
     for a in ind(A):
         for (b, r) in A[2][a]:
