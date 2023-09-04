@@ -8,18 +8,18 @@ are positive or negative examples.
 It then *learns* an EL-concept that fits the examples with respect to the
 provided background knowledge.
 
-More information on SPELL and the theory behind it is available in the following paper:
-*insert link to paper here*
+More information on SPELL and the theory behind it is available in the paper
+[SAT-based PAC Learning of Description Logic Concepts](https://www.ijcai.org/proceedings/2023/0373.pdf)
 
 You can find instructions on how to reproduce the benchmarks in [benchmarks.md](benchmarks.md)
 
-Contact: Maurice Funk `mfunk@informatik.uni-leipzig.de`
+Contact [Maurice Funk](https://home.uni-leipzig.de/mfunk/) `mfunk@informatik.uni-leipzig.de` if you have any questions or comments
 
 ## Setting up and running SPELL
 
 These instructions were tested with python 3.10.9 on macOS.
 
-Create a python virtual enviroment (to avoid installing dependencies in the global environment):
+Create a python virtual environment (to avoid installing dependencies in the global environment):
 ```
     python -m venv spell-venv
 ```
