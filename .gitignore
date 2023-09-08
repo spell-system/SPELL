@@ -1,0 +1,10 @@
+spell-venv
+__pycache__
+.tdb
+.cache
+robot
+*.code-workspace
+.cl.sparql
+.coverage
+.out.csv
+tmp.owl
