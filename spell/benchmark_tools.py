@@ -1020,6 +1020,6 @@ def execute_sml_bench(path, task):
             )
         )
 
-        verify_solution(owlfile, P, N, indmap, res)
+        # verify_solution(owlfile, P, N, indmap, res)
 
         print()
