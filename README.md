@@ -51,3 +51,8 @@ See
 ```
 for some options.
 
+Run the demo webui:
+```
+pip install flask
+python -m webui.spell_webui
+```

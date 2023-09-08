@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPELL</title>
+
+    <script src="static/jquery-3.1.1.min.js"></script>
+    <link rel="stylesheet" href="static/semantic.min.css">
+    <script src="static/semantic.min.js"></script>
+
+    <script>
+
+var P = []
+var N = []
+function reqListener() {
+    tarea = document.getElementById('output')
+    tarea.value = this.responseText
+    tarea.scrollTop = tarea.scrollHeight;
+}
+function doneListener() {
+    tarea = document.getElementById('output')
+    tarea.value = this.responseText
+    tarea.scrollTop = tarea.scrollHeight;
+    document.getElementById('spinner').className = "ui disabled centered inline loader"
+}
+function set_ex_state(id, state) {
+    pcount = document.getElementById("count p")
+    ncount = document.getElementById("count n")
+    if (document.getElementById("p" + id).disabled) {
+        const index = P.indexOf(id);
+        P.splice(index, 1);
+
+        pcount.textContent = parseInt(pcount.textContent) - 1
+    }
+    if (document.getElementById("n" + id).disabled) {
+        const index = N.indexOf(id);
+        N.splice(index, 1);
+        ncount.textContent = parseInt(ncount.textContent) - 1
+    }
+    if(state == "p") {
+        document.getElementById("p" + id).disabled = true
+        pcount.textContent = parseInt(pcount.textContent) + 1
+        document.getElementById("n" + id).disabled = false
+        document.getElementById("i" + id).disabled = false
+        P.push(id)
+    }
+    if(state == "n") {
+        document.getElementById("p" + id).disabled = false
+        document.getElementById("n" + id).disabled = true
+        ncount.textContent = parseInt(ncount.textContent) + 1
+        document.getElementById("i" + id).disabled = false
+        N.push(id)
+    }
+    if(state == "i") {
+        document.getElementById("p" + id).disabled = false
+        document.getElementById("n" + id).disabled = false
+        document.getElementById("i" + id).disabled = true
+    }
+    get_output()
+}
+function get_output() {
+    e = document.getElementById('spinner')
+    if(e) {
+        e.className = "ui active centered inline loader"
+    }
+    e = document.getElementById('mode-dropdown')
+
+    const req = new XMLHttpRequest();
+    req.addEventListener("progress", reqListener);
+    req.addEventListener("loadend", doneListener)
+    req.open("POST", "/run");
+    req.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    req.send(JSON.stringify({ "P": P, "N": N, "mode":e.value}));
+}
+function reset_state(){
+    pcount = document.getElementById("count p")
+    pcount.textContent = "0"
+    ncount = document.getElementById("count n")
+    ncount.textContent = "0"
+    P.forEach(id => {
+        document.getElementById("p" + id).disabled = false
+        document.getElementById("n" + id).disabled = false
+        document.getElementById("i" + id).disabled = true
+    });
+    N.forEach(id => {
+        document.getElementById("p" + id).disabled = false
+        document.getElementById("n" + id).disabled = false
+        document.getElementById("i" + id).disabled = true
+    });
+    P = []
+    N = []
+    get_output()
+}
+    </script>
+    <style>
+        #scroll-list {
+    max-height: 80vh;
+    overflow-x: scroll;
+    }
+
+    </style>
+</head>
+
+<body>
+    <div class="ui container">
+        <h1 class="ui center aligned header">SPELL</h1>
+
+        <hr>
+        <div class="ui two column centered grid">
+            <div class="row">
+                <div id="profileInfo" class="column">
+                    <button class="ui labeled icon active blue button" onclick="reset_state(); return false" ><i class="undo icon"></i>Reset</button>
+                    <div class="ui label">
+                    Total
+                    <div class="detail" > 0 </div>
+                    </div>
+                    <div class="ui label green">
+                    Positive
+                    <div class="detail" id = "count p"> 0 </div>
+                    </div>
+                    <div class="ui label red">
+                    Negative
+                    <div class="detail" id = "count n"> 0 </div>
+                    </div>
+
+                    <div class = "ui segment">
+                    <div class="ui middle aligned divided list" id="scroll-list">
+                        {% for todo in todo_list %}
+
+                        <div class="item">
+                            <div class="right floated content">
+                                <div class="ui buttons">
+                                    <button class="ui active grey button" type="button"  id="i{{todo.id}}" onclick="set_ex_state({{todo.id}}, 'i'); return false" disabled = "" autocomplete="off">Ignore</a>
+                                    <button class="ui active red button" type="button" id="n{{todo.id}}" onclick="set_ex_state({{todo.id}}, 'n'); return false" autocomplete="off">Negative</button>
+                                    <button class="ui active green button" type="button" id="p{{todo.id}}" onclick="set_ex_state({{todo.id}}, 'p'); return false" autocomplete="off">Positive</button>
+                                </div>
+                            </div>
+                            <div class="content">
+                                {{todo.name}}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    </div>
+                </div>
+
+                <div id="profileData" class="column">
+                    <div class="ui form">
+                        <div class = "field">
+                            <label> Mode</label>
+                        <select class="ui dropdown" id="mode-dropdown" onchange="get_output()">
+                            <option value="full_approx">Full Approx</option>
+                            <option value="neg_approx">Neg Approx</option>
+                            <option value="exact">Exact</option>
+                        </select>
+                        </div>
+                        <div class="field">
+                            <label>Output </label>
+                            <textarea id="output" readonly="" rows="30"></textarea>
+                            <div class="ui active centered inline loader" id="spinner">Running...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        get_output()
+    </script>
+</body>
+
+</html>
