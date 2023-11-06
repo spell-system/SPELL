@@ -34,29 +34,30 @@ indmap = {}
 
 def load_structure():
     global indmap, A
-    A, indmap, _ = structure_from_owl("tests/family-benchmark.owl")
-    limit = 1000
+    # A, indmap, _ = structure_from_owl("tests/family-benchmark.owl")
+    A, indmap, _ = structure_from_owl("./yago-full.owl")
+    limit = 15000
 
-    for k in indmap.keys():
-        if limit <= 0:
-            continue
-        if not "#" in k:
-            continue
-        limit -= 1
-        state.append(Example(indmap[k], k))
+    # for k in indmap.keys():
+    #     if limit <= 0:
+    #         continue
+    #     if not "#" in k:
+    #         continue
+    #     limit -= 1
+    #     state.append(Example(indmap[k], k))
 
-    # reverse_indmap = {
-    #     n: name
-    #     for (name, n) in indmap.items()
-    #     if "#" in name or "/" in name or "NC_" in name
-    # }
-    # for cn in A[1].keys():
-    #     if "Movie" in cn:
-    #         for id in A[1][cn]:
-    #             if limit <=0:
-    #                 break
-    #             limit -= 1
-    #             state.append(Example(id, reverse_indmap[id], False, False))
+    reverse_indmap = {
+        n: name
+        for (name, n) in indmap.items()
+        if "#" in name or "/" in name or "NC_" in name
+    }
+    for cn in A[1].keys():
+        if "Movie" in cn:
+            for id in A[1][cn]:
+                if limit <=0:
+                    break
+                limit -= 1
+                state.append(Example(id, reverse_indmap[id]))
 
     state.sort(key = lambda k : k.name)
 
