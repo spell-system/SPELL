@@ -68,6 +68,7 @@ def add_ns(n: str):
 class ABoxBuilder:
     A: Structure
     indmap: dict[str, int]
+    role_names = set()
 
     def __init__(self):
         self.indmap = {}
@@ -90,7 +91,8 @@ class ABoxBuilder:
             self.A[1][cn] = set()
         return
 
-    def declare_rn(self, _):
+    def declare_rn(self, rn):
+        self.role_names.add(rn)
         return
 
     def concept_assertion(self, a: int, concept: str):
@@ -144,7 +146,7 @@ def load_owl(file: str):
             for r in reader.parse_rule(elem):
                 onto.add_rule(r)
         elif elem.tag == tag_object_prop:
-            abox.declare_rn(add_ns(elem.attrib[attr_about]))
+            abox.declare_rn(elem.attrib[attr_about])
             onto.add_property(reader.parse_property(elem))
             elem.clear()
         elif elem.tag == tag_data_prop:
@@ -184,7 +186,8 @@ def load_owl(file: str):
                     role = tag2name(child.tag)
                     other = child.attrib[attr_resource]
                     facts += 1
-                    abox.role_assertion(ind_idx, other, role)
+                    if role in abox.role_names:
+                        abox.role_assertion(ind_idx, other, role)
 
             elem.clear()
 
