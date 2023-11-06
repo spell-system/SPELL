@@ -55,7 +55,7 @@ def test_father():
 
 
 def test_fm_bench():
-    A, indmap, _ = structure_from_owl("tests/family-benchmark.owl")
+    A, indmap, _ = structure_from_owl("tests/fm.owl")
 
     P = [
         indmap[i]
@@ -178,7 +178,7 @@ def test_fm_bench():
 
 
 def test_fm_bench2():
-    A, indmap, _ = structure_from_owl("tests/family-benchmark.owl")
+    A, indmap, _ = structure_from_owl("tests/fm.owl")
 
     P = [
         indmap[i]
