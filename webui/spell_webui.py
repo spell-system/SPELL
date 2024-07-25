@@ -11,13 +11,11 @@ class Example:
     id: int = 0
     name: str = ""
 
-state: list[Example] = []
-
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return render_template("base.html", todo_list=state)
+    return render_template("base.html")
 
 @app.route("/run", methods = ["POST"])
 def generate_output():
@@ -31,35 +29,36 @@ def generate_output():
 
 indmap = {}
 
+@app.route("/search", methods = ["GET"])
+def search():
+    query = request.args.get('q', '')
+
+    result = []
+    limit = 100
+    for k in indmap:
+        if limit <= 0:
+            break
+        
+        if query in k.lower():
+            result.append(Example(indmap[k], to_readable_name(k)))
+            limit -= 1
+
+    result.sort(key = lambda k : k.name)
+
+    return result
+
+
+
+
+def to_readable_name(name) -> str:
+    return name
+
 
 def load_structure():
     global indmap, A
-    # A, indmap, _ = structure_from_owl("tests/family-benchmark.owl")
+    # A, indmap, _ = structure_from_owl("tests/fm.owl")
     A, indmap, _ = structure_from_owl("./yago-full.owl")
-    limit = 15000
 
-    # for k in indmap.keys():
-    #     if limit <= 0:
-    #         continue
-    #     if not "#" in k:
-    #         continue
-    #     limit -= 1
-    #     state.append(Example(indmap[k], k))
-
-    reverse_indmap = {
-        n: name
-        for (name, n) in indmap.items()
-        if "#" in name or "/" in name or "NC_" in name
-    }
-    for cn in A[1].keys():
-        if "Movie" in cn:
-            for id in A[1][cn]:
-                if limit <=0:
-                    break
-                limit -= 1
-                state.append(Example(id, reverse_indmap[id]))
-
-    state.sort(key = lambda k : k.name)
 
 if __name__ == "__main__":
     load_structure()

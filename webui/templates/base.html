@@ -25,41 +25,34 @@ function doneListener() {
     tarea.scrollTop = tarea.scrollHeight;
     document.getElementById('spinner').className = "ui disabled centered inline loader"
 }
-function set_ex_state(id, state) {
-    pcount = document.getElementById("count p")
-    ncount = document.getElementById("count n")
-    if (document.getElementById("p" + id).disabled) {
-        const index = P.indexOf(id);
-        P.splice(index, 1);
 
-        pcount.textContent = parseInt(pcount.textContent) - 1
+function buttonPress(clickedButton, state, id) {
+    const buttons = clickedButton.parentElement.querySelectorAll('button');
+    buttons.forEach(button => {
+        button.disabled = false
+    });
+    clickedButton.disabled = true
+
+    const index = P.indexOf(id);
+    if (index != -1) {
+        P.splice(index, 1);
     }
-    if (document.getElementById("n" + id).disabled) {
-        const index = N.indexOf(id);
-        N.splice(index, 1);
-        ncount.textContent = parseInt(ncount.textContent) - 1
+    
+    const index2 = N.indexOf(id);
+    if (index2 != -1) {
+        N.splice(index2, 1);
     }
-    if(state == "p") {
-        document.getElementById("p" + id).disabled = true
-        pcount.textContent = parseInt(pcount.textContent) + 1
-        document.getElementById("n" + id).disabled = false
-        document.getElementById("i" + id).disabled = false
+
+    if (state == "p") {
         P.push(id)
     }
-    if(state == "n") {
-        document.getElementById("p" + id).disabled = false
-        document.getElementById("n" + id).disabled = true
-        ncount.textContent = parseInt(ncount.textContent) + 1
-        document.getElementById("i" + id).disabled = false
+    if (state == "n") {
         N.push(id)
     }
-    if(state == "i") {
-        document.getElementById("p" + id).disabled = false
-        document.getElementById("n" + id).disabled = false
-        document.getElementById("i" + id).disabled = true
-    }
+
     get_output()
 }
+
 function get_output() {
     e = document.getElementById('spinner')
     if(e) {
@@ -74,42 +67,80 @@ function get_output() {
     req.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
     req.send(JSON.stringify({ "P": P, "N": N, "mode":e.value}));
 }
-function reset_state(){
-    pcount = document.getElementById("count p")
-    pcount.textContent = "0"
-    ncount = document.getElementById("count n")
-    ncount.textContent = "0"
-    P.forEach(id => {
-        document.getElementById("p" + id).disabled = false
-        document.getElementById("n" + id).disabled = false
-        document.getElementById("i" + id).disabled = true
-    });
-    N.forEach(id => {
-        document.getElementById("p" + id).disabled = false
-        document.getElementById("n" + id).disabled = false
-        document.getElementById("i" + id).disabled = true
-    });
+async function reset_state(){
     P = []
     N = []
+    await search({target: { value: ""}})
     get_output()
 }
-function search(e) {
-    var searchText = e.target.value;
+async function search(e) {
     var list = document.getElementById("scroll-list")
-    var els = list.getElementsByTagName("div")
-    for(var k in els) {
-        var el = els[k];
-        if (el.className != "item") {
-            continue;
-        }
-        var c = el.getElementsByClassName("content")[1];
-        
-        if (c.textContent.includes(searchText)) {
-            el.style.display = "block"
-        } else {
-            el.style.display = "none"
-        }
+    var searchText = e.target.value.toLowerCase();
+
+    const response = await fetch(`/search?q=${encodeURIComponent(searchText)}`);
+    const data = await response.json();
+
+    list.innerHTML = '';
+    data.forEach(item => {
+        list.appendChild(itemHTML(item));
+    });
+}
+
+function itemHTML(item) {
+    const itemDiv = document.createElement('div');
+    itemDiv.className = "item"
+    
+    buttonDiv = document.createElement("div")
+    buttonDiv.className = "right floated content"
+    itemDiv.appendChild(buttonDiv)
+
+    buttonDiv2 = document.createElement("div")
+    buttonDiv2.className = "ui buttons"
+    buttonDiv.appendChild(buttonDiv2)
+
+    const button = document.createElement('button');
+    button.className = 'ui active green button';
+    button.textContent = "Positive";
+
+    button.addEventListener('click', () => {
+        buttonPress(button, "p", item.id);
+    });
+    buttonDiv2.appendChild(button)
+    if (item.id in P) {
+        button.disabled = true
     }
+
+    const button2 = document.createElement('button');
+    button2.className = 'ui active red button';
+    button2.textContent = "Negative";
+
+    button2.addEventListener('click', () => {
+        buttonPress(button2, "n", item.id);
+    });
+    if (item.id in N) {
+        button2.disabled = true
+    }
+    buttonDiv2.appendChild(button2)
+    
+    const button3 = document.createElement('button');
+    button3.className = 'ui active grey button';
+    button3.textContent = "Ignore";
+
+    button3.addEventListener('click', () => {
+        buttonPress(button3, "i", item.id);
+    });
+    buttonDiv2.appendChild(button3)
+    if (!(item.id in P) && !(item.id in N)) {
+        button3.disabled = true
+    }
+
+    contentDiv = document.createElement("div")
+    contentDiv.className = "content"
+    contentDiv.textContent = item.name
+    itemDiv.appendChild(contentDiv)
+
+    return itemDiv
+
 }
     </script>
     <style>
@@ -123,6 +154,8 @@ function search(e) {
 
 <body>
     <div class="ui container">
+        <hr>
+
         <h1 class="ui center aligned header">SPELL</h1>
 
         <hr>
@@ -148,19 +181,6 @@ function search(e) {
                             <input id = "search box" type="text" placeholder="Search...">
                         </div>
                     <div class="ui middle aligned divided list" id="scroll-list">
-                        {% for todo in todo_list %}
-
-                        <div class="item">
-                            <div class="right floated content">
-                                <div class="ui buttons">
-                                    <button class="ui active grey button" type="button"  id="i{{todo.id}}" onclick="set_ex_state({{todo.id}}, 'i'); return false" disabled = "" autocomplete="off">Ignore</a>
-                                    <button class="ui active red button" type="button" id="n{{todo.id}}" onclick="set_ex_state({{todo.id}}, 'n'); return false" autocomplete="off">Negative</button>
-                                    <button class="ui active green button" type="button" id="p{{todo.id}}" onclick="set_ex_state({{todo.id}}, 'p'); return false" autocomplete="off">Positive</button>
-                                </div>
-                            </div>
-                            <div class="content">{{todo.name}}</div>
-                        </div>
-                        {% endfor %}
                     </div>
                     </div>
                 </div>
@@ -186,6 +206,7 @@ function search(e) {
         </div>
     </div>
     <script>
+        search({target: { value: ""}})
         get_output()
         const input = document.getElementById("search box");
         input.addEventListener("input", search);
