@@ -51,7 +51,7 @@ def main():
 
     time_parsed = time.process_time()
 
-    print("== Starting incremental search search for fitting queryy")
+    print("== Starting incremental search search for fitting query")
     time_start_solve = time.process_time()
 
     _, res  = solve_incr(A, P, N, md, timeout=args.timeout, max_size=args.max_size)
