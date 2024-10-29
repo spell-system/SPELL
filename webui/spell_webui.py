@@ -81,7 +81,11 @@ def search():
     return result
 
 
-def to_readable_name(name) -> str:
+def to_readable_name(name : str) -> str:
+    for (a, b) in A.nsmap.items():
+        if a:
+            if name.startswith(b):
+                return "{}:{}".format(a, name[len(b):])
     return name
 
 
