@@ -5,7 +5,7 @@ from spell.structures import ABoxBuilder, compact_canonical_model, structure_fro
 from spell.benchmark_tools import execute_sml_bench
 
 
-def solve_k2(size, A, P, N):
+def fitting_of_size_exists(size, A, P, N):
     sol = solve(size, A, P, N, 1, True)
     if sol is None:
         return False
@@ -13,7 +13,7 @@ def solve_k2(size, A, P, N):
     return cov == len(P) + len(N)
 
 
-def solve_incr2(A, P, N) -> bool:
+def fitting_exists(A, P, N) -> bool:
     cov, q = solve_incr(A, P, N, mode.neg_approx)
     return cov == len(P) + len(N)
 
@@ -26,7 +26,7 @@ def test_cycle():
     ]
     N = [indmap["test.n1"]]
 
-    assert solve_incr2(A, P, N)
+    assert fitting_exists(A, P, N)
 
 
 def test_hard():
@@ -38,7 +38,7 @@ def test_hard():
     N = [indmap["test.n"]]
 
     time_start = time.process_time()
-    assert solve_incr2(A, P, N)
+    assert fitting_exists(A, P, N)
     time_end = time.process_time()
     print("{}".format(time_end - time_start))
 
@@ -49,9 +49,9 @@ def test_father():
 
     P = [indmap["http://example.com/father#markus"], indmap["http://example.com/father#stefan"], indmap["http://example.com/father#martin"]]
     N = [indmap["http://example.com/father#heinz"], indmap["http://example.com/father#anna"], indmap["http://example.com/father#michelle"]]
-    assert not solve_k2(1, A, P, N)
-    assert solve_k2(2, A, P, N)
-    assert solve_incr2(A, P, N)
+    assert not fitting_of_size_exists(1, A, P, N)
+    assert fitting_of_size_exists(2, A, P, N)
+    assert fitting_exists(A, P, N)
 
 
 def test_fm_bench():
@@ -171,7 +171,7 @@ def test_fm_bench():
             "family.F1M6",
         ]
     ]
-    assert solve_incr2(A, P, N)
+    assert fitting_exists(A, P, N)
 
 
 # test_fm_bench()
@@ -278,10 +278,10 @@ def test_fm_bench2():
         ]
     ]
 
-    assert not solve_k2(1, A, P, N)
-    assert not solve_k2(2, A, P, N)
-    assert solve_k2(3, A, P, N)
-    assert solve_incr2(A, P, N)
+    assert not fitting_of_size_exists(1, A, P, N)
+    assert not fitting_of_size_exists(2, A, P, N)
+    assert fitting_of_size_exists(3, A, P, N)
+    assert fitting_exists(A, P, N)
 
 
 def test_carcinogen():
@@ -381,8 +381,8 @@ def test_carcinogen():
         ]
     ]
 
-    assert not solve_k2(1, A, P, N)
-    assert not solve_k2(2, A, P, N)
+    assert not fitting_of_size_exists(1, A, P, N)
+    assert not fitting_of_size_exists(2, A, P, N)
 
 
 # test_carcinogen()
@@ -551,7 +551,7 @@ def test_lymphography():
         ]
     ]
 
-    assert solve_incr2(A, P, N)
+    assert fitting_exists(A, P, N)
 
 
 def test_trains():
@@ -579,7 +579,7 @@ def test_trains():
         ]
     ]
 
-    assert solve_incr2(A, P, N)
+    assert fitting_exists(A, P, N)
 
 
 def test_owl1():
@@ -602,8 +602,8 @@ def test_el_path5():
         i["http://example.com/test#n"],
     ]
 
-    assert not solve_k2(6, A, P, N)
-    assert solve_k2(7, A, P, N)
+    assert not fitting_of_size_exists(6, A, P, N)
+    assert fitting_of_size_exists(7, A, P, N)
 
 
 def test_el_path4():
@@ -618,9 +618,9 @@ def test_el_path4():
         i["http://example.com/test#n"],
     ]
 
-    assert solve_incr2(A, P, N)
-    assert not solve_k2(5, A, P, N)
-    assert solve_k2(6, A, P, N)
+    assert fitting_exists(A, P, N)
+    assert not fitting_of_size_exists(5, A, P, N)
+    assert fitting_of_size_exists(6, A, P, N)
 
 
 def test_el_tree15():
@@ -635,7 +635,7 @@ def test_el_tree15():
     ]
 
     # There should be no separating concept, if tbox reasoning works
-    assert not solve_k2(5, A, P, N)
+    assert not fitting_of_size_exists(5, A, P, N)
 
 
 def test_owl_bench():
@@ -647,10 +647,9 @@ def test_owl_bench():
         i["http://benchmark/OWL2Bench#U0WC0D3VP0"],
     ]
 
-    assert solve_incr2(A, P, N)
+    assert fitting_exists(A, P, N)
 
 
-# test_owl_bench()
 
 def test_resoning1():
     from spell.structures import TBox
@@ -675,7 +674,7 @@ def test_resoning1():
     t.saturate()
     compact_canonical_model(Ab, t)
 
-    assert solve_incr2(Ab.A, [Ab.indmap["a"], Ab.indmap["c"]], [Ab.indmap["b"]])
+    assert fitting_exists(Ab.A, [Ab.indmap["a"], Ab.indmap["c"]], [Ab.indmap["b"]])
 
 def test_resoning2():
     from spell.structures import TBox
@@ -701,8 +700,6 @@ def test_resoning2():
     res = solve_incr(Ab.A, [Ab.indmap["a1"]], [Ab.indmap["b"]], mode.exact, max_size=10)
 
     assert res[0] == 1
-
-# test_resoning()
 
 def test_TBox():
     from spell.structures import TBox

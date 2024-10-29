@@ -14,7 +14,10 @@ namespaces = {
 }
 
 Signature = tuple[list[str], list[str]]
-Structure = tuple[int, dict[str, set[int]], dict[int, set[tuple[int, str]]]]
+Structure = tuple[int,
+                  dict[str, set[int]],
+                  dict[int, set[tuple[int, str]]]
+            ]
 
 
 def ind(A: Structure) -> range:

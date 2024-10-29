@@ -1,3 +1,4 @@
+from os import write
 import time
 from enum import Enum
 from typing import NamedTuple, Union
@@ -16,6 +17,8 @@ from .structures import (
     rolenames,
     solution2sparql,
 )
+
+mode = Enum("mode", "exact neg_approx full_approx")
 
 HC = dict[str, list[int]]
 Simul = list[list[int]]
@@ -418,6 +421,7 @@ def solve(
     all_pos: bool,
     timeout: float = -1,
 ) -> Union[tuple[int, Structure], None]:
+
     time_start = time.process_time()
     A, P, N = restrict_nb(size, A, P, N)
 
@@ -435,9 +439,6 @@ def solve(
 
     for c in tree_query_constraints(size, sigma, mapping):
         pysolvers.glucose41_add_cl(g.glucose, c)
-
-    # for c in no_self_simulation(size, sigma, mapping):
-    #     pysolvers.glucose41_add_cl(g.glucose, c)
 
     for c in simulation_constraints(size, sigma, A, mapping):
         pysolvers.glucose41_add_cl(g.glucose, c)
@@ -481,7 +482,6 @@ def solve(
     return best_sol
 
 
-mode = Enum("mode", "exact neg_approx full_approx")
 
 # Search for a small separating query by incrementally increasing the size
 def solve_incr(
@@ -518,117 +518,4 @@ def solve_incr(
         "== Best query found with coverage {}/{}".format(best_coverage, len(P) + len(N))
     )
     print(solution2sparql(best_q))
-    return (best_coverage, best_q)
-
-# Constructs a formula to find a separating query of size and solves it
-# Guaranted that we can reach min_coverage
-def solve2(
-    size: int,
-    A: Structure,
-    P: list[int],
-    N: list[int],
-    coverage_lb: int,
-    all_pos: bool,
-    timeout: float = -1,
-):
-    time_start = time.process_time()
-    A, P, N = restrict_nb(size, A, P, N)
-
-    if all_pos:
-        min_pos = len(P)
-    else:
-        # If we want to cover at least min_coverage examples, we have to cover at
-        # least min_pos positive examples
-        min_pos = max(coverage_lb - len(N), 1)
-    # Use symbols that occur in distance k - 1 of at least min_pos positive example
-    sigma = determine_relevant_symbols(A, P, min_pos, size - 1)
-
-    g = Glucose4()
-    mapping = create_variables(size, sigma, A)
-
-    for c in tree_query_constraints(size, sigma, mapping):
-        pysolvers.glucose41_add_cl(g.glucose, c)
-
-    # for c in no_self_simulation(size, sigma, mapping):
-    #     pysolvers.glucose41_add_cl(g.glucose, c)
-
-    for c in simulation_constraints(size, sigma, A, mapping):
-        pysolvers.glucose41_add_cl(g.glucose, c)
-
-    dt = time.process_time() - time_start
-    best_sol = None
-    coverage_ub = len(P) + len(N)
-    while coverage_lb <= coverage_ub and (dt < timeout or timeout < 0):
-
-        for c in create_coverage_formula(P, N, coverage_lb, mapping, all_pos):
-            pysolvers.glucose41_add_cl(g.glucose, c)
-
-        satisfiable = g.solve()
-        if not satisfiable:
-            g.delete()
-            return best_sol
-
-        # print(g.accum_stats())
-        model: set[int] = set(g.get_model())  # type: ignore
-        coverage_lb = real_coverage(model, P, N, mapping)
-
-        if True:
-            # Required for minimization
-            for c in create_coverage_formula(P, N, coverage_lb, mapping, all_pos):
-                pysolvers.glucose41_add_cl(g.glucose, c)
-
-            model = minimize_concept_assertions(size, sigma, g, mapping, model)
-        best_q = model2fitting_query(size, sigma, mapping, model)
-        best_sol = (coverage_lb, best_q)
-        yield(solution2sparql(best_q) + "\n")
-
-        yield(
-            "== Coverage: {}/{} == Accuracy: {}\n".format(
-                coverage_lb, coverage_ub, coverage_lb / coverage_ub
-            )
-        )
-        coverage_lb = coverage_lb + 1
-        dt = time.process_time() - time_start
-
-    g.delete()
-    return best_sol
-
-
-mode = Enum("mode", "exact neg_approx full_approx")
-
-# Search for a small separating query by incrementally increasing the size
-def solve_incr2(
-    A: Structure,
-    P: list[int],
-    N: list[int],
-    m: mode,
-    timeout: float = -1,
-    max_size: int = 19,
-) :
-    time_start = time.process_time()
-    i = 1
-    best_coverage = len(P)
-    best_q = Structure((1, {}, {0: set()}))
-    dt = time.process_time() - time_start
-    while (
-        best_coverage < len(P) + len(N)
-        and i <= max_size
-        and (dt < timeout or timeout == -1)
-    ):
-        yield("== Searching for a fitting query of size {}\n".format(i))
-        if m == mode.exact:
-            sol = yield from  solve2(i, A, P, N, len(P) + len(N), True, timeout - dt)
-        elif m == mode.neg_approx:
-            sol = yield from solve2(i, A, P, N, best_coverage + 1, True, timeout - dt)
-        else:
-            sol = yield from solve2(i, A, P, N, best_coverage + 1, False, timeout - dt)
-        if sol is not None:
-            best_coverage, best_q = sol
-        i += 1
-        dt = time.process_time() - time_start
-
-    yield(
-        "== Best query found with coverage {}/{}\n".format(best_coverage, len(P) + len(N))
-    )
-    yield(solution2sparql(best_q) + "\n")
     return (best_coverage, best_q)
