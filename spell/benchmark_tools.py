@@ -5,9 +5,20 @@ import time
 from typing import FrozenSet, Generator, Union
 
 from .fitting import non_empty_symbols, solve_incr, mode
-from .structures import (ABoxBuilder, Signature, Structure, conceptname_ext,
-                         conceptnames, copy_structure, generate_all_trees, ind,
-                         rolenames, solution2sparql, structure_from_owl)
+from .structures import (
+    ABoxBuilder,
+    Signature,
+    Structure,
+    conceptname_ext,
+    conceptnames,
+    copy_structure,
+    generate_all_trees,
+    ind,
+    map_ind_name,
+    rolenames,
+    solution2sparql,
+    structure_from_owl,
+)
 
 ROBOT_PATH = "{}/../robot/robot".format(os.path.dirname(os.path.realpath(__file__)))
 ROBOT_JAVA_ARGS = "-Xmx40G"
@@ -18,7 +29,7 @@ Concept = FrozenSet[tuple[str, Union[None, "Concept"]]]
 def drop_leave_atom(c: Concept) -> list[Concept]:
     res: list[Concept] = []
 
-    for (rn, d) in c:
+    for rn, d in c:
         weak_c = c - {(rn, d)}
         if not d:
             res.append(weak_c)
@@ -41,18 +52,18 @@ def weaken_concept(concept: Concept, steps: int) -> set[Concept]:
 
 
 def add_random_cn(A: Structure, sigma: Signature) -> Structure:
-    a = random.randrange(A[0])
+    a = random.randrange(A.max_ind)
     cn = random.choice(conceptnames(sigma))
 
     attempts = 0
     while a in conceptname_ext(A, cn) and attempts < 100:
-        a = random.randrange(A[0])
+        a = random.randrange(A.max_ind)
         cn = random.choice(conceptnames(sigma))
         attempts += 1
 
     A2 = copy_structure(A)
 
-    A2[1][cn].add(a)
+    A2.cn_ext[cn].add(a)
     return A2
 
 
@@ -93,13 +104,15 @@ def random_concept(size: int, sigma: Signature) -> Structure:
             casserts[cn].add(ind)
             no_casserts += 1
 
-    return (edges + 1, casserts, rasserts)
+    return Structure(
+        max_ind=edges + 1, cn_ext=casserts, rn_ext=rasserts, indmap={}, nsmap={}
+    )
 
 
 def frontier(c: Concept) -> list[Concept]:
     res: list[Concept] = []
 
-    for (rn, d) in c:
+    for rn, d in c:
         base: Concept = c - {(rn, d)}
         if not d:  # Conceptname
             res.append(base)
@@ -113,17 +126,19 @@ def frontier(c: Concept) -> list[Concept]:
 
     return res
 
+
 def repeated_frontier(c: Concept, n: int) -> list[Concept]:
     f = [c]
 
     for i in range(n):
-        f = list({ c for d in f for c in frontier(d)})
+        f = list({c for d in f for c in frontier(d)})
 
     return f
 
+
 def drop_root_subtree(c: Concept) -> list[Concept]:
     res: list[Concept] = []
-    for (rn, d) in c:
+    for rn, d in c:
         res.append(c - {(rn, d)})
     return res
 
@@ -145,7 +160,7 @@ def concept2sparqlclauses(concept: Concept, counter) -> list[str]:
         res.append("?{} a <http://www.w3.org/2002/07/owl#Thing> .".format(counter))
     if len(concept) > 0:
         res.append("FILTER EXISTS {")
-        for (rn, d) in concept:
+        for rn, d in concept:
             if d is None:
                 res.append("?{} a {} .".format(thisnode, rn))
             else:
@@ -214,11 +229,11 @@ def concept_depth(c: Union[None, Concept]) -> int:
 
 def structure2concept_rec(s: Structure, i: int) -> Concept:
     res: Concept = frozenset()
-    for cn in s[1].keys():
-        if i in s[1][cn]:
+    for cn in s.cn_ext.keys():
+        if i in s.cn_ext[cn]:
             res = res | {(cn, None)}
 
-    for (j, r) in s[2][i]:
+    for j, r in s.rn_ext[i]:
         c2 = structure2concept_rec(s, j)
         res = res | {(r, c2)}
 
@@ -232,29 +247,35 @@ def structure2concept(s: Structure) -> Concept:
 def concept2structure(c: Concept) -> Structure:
     queue: list[tuple[Concept, int]] = [(c, 0)]
 
-    res: Structure = (1, {}, {})
+    res = Structure(max_ind=1, cn_ext={}, rn_ext={0: set()}, indmap={}, nsmap={})
 
     while len(queue) > 0:
         (c, ind) = queue.pop(0)
-        res[2][ind] = set()
+        res.rn_ext[ind] = set()
 
-        for (r, c2) in c:
+        for r, c2 in c:
             if c2 == None:
-                if r not in res[1].keys():
-                    res[1][r] = set()
-                res[1][r].add(ind)
+                if r not in res.cn_ext.keys():
+                    res.cn_ext[r] = set()
+                res.cn_ext[r].add(ind)
             else:
-                ind2 = res[0]
-                res = (res[0] + 1, res[1], res[2])
-                res[2][ind].add((ind2, r))
+                ind2 = res.max_ind
+                res = Structure(
+                    max_ind=res.max_ind + 1,
+                    cn_ext=res.cn_ext,
+                    rn_ext=res.rn_ext,
+                    indmap={},
+                    nsmap={},
+                )
+                res.rn_ext[ind].add((ind2, r))
                 queue.append((c2, ind2))
 
     return res
 
 
 def get_reachable_inds(owlfile, starts: list[str]) -> list[str]:
-    A, indmap, nsmap = structure_from_owl(owlfile)
-    new_elems = {indmap[s] for s in starts}
+    A = structure_from_owl(owlfile)
+    new_elems = {A.indmap[s] for s in starts}
     res: set[int] = set()
 
     while len(new_elems) > 0:
@@ -262,14 +283,14 @@ def get_reachable_inds(owlfile, starts: list[str]) -> list[str]:
 
         new_new_elems: set[int] = set()
         for a in new_elems:
-            for (b, r) in A[2][a]:
+            for b, r in A.rn_ext[a]:
                 if b not in res:
                     new_new_elems.add(b)
 
         new_elems = new_new_elems
 
     relevant_inds: list[str] = []
-    for (k, v) in indmap.items():
+    for k, v in A.indmap.items():
         # Restrict to http since output needs to be IRIs
         # This also drops "Fresh" individuals, introduced by TBox reasoning
         if "http" in k and v in res:
@@ -317,8 +338,8 @@ def create_materialized_tdb_dir(owlfile, tdb_dir):
 
         shutil.rmtree("./" + tdb_dir)
 
-    A, indmap, nsmap = structure_from_owl(owlfile)
-    construct_owl_from_structure(tmp_owl, A, indmap, nsmap)
+    A = structure_from_owl(owlfile)
+    construct_owl_from_structure(tmp_owl, A)
 
     cmd = "{} query --input {} --create-tdb true --tdb-directory {}"
     fullcmd = cmd.format(ROBOT_PATH, tmp_owl, tdb_dir)
@@ -440,14 +461,13 @@ def emit_sml_benchmark(
     with open(dll_conf_path, "w") as file:
         file.write("[main]\n")
         file.write("loadingTime=30\n")
-        file.write("algorithm.type = \"eltl\"\n")
+        file.write('algorithm.type = "eltl"\n')
         file.write("algorithm.stopOnFirstDefinition = true\n")
         if "owl2bench" not in name:
             file.write("algorithm.useMinimizer = true\n")
         else:
             file.write("algorithm.useMinimizer = false\n")
         file.write("algorithm.maxClassExpressionDepth = 16\n")
-
 
     with open(info_path, "w") as file:
         file.write("Benchmark is automatically generated for SPELL\n")
@@ -545,20 +565,20 @@ def parse_concept(concept_str: str) -> Concept:
     return res
 
 
-def verify_solution(owlfile, P, N, indmap, solution):
+def verify_solution(owlfile, B, P, N, solution):
     claimed_acc, best_q = solution
 
     print("== Querying {} with best solution".format(owlfile))
 
-    A, indmap, nsmap = structure_from_owl(owlfile)
-    construct_owl_from_structure("tmp.owl", A, indmap, nsmap)
+    A = structure_from_owl(owlfile)
+    construct_owl_from_structure("tmp.owl", A)
 
     result = query_owl("tmp.owl", solution2sparql(best_q))
 
     rs = set()
     for res in result:
-        if res in indmap:
-            rs.add(indmap[res])
+        if res in B.indmap:
+            rs.add(B.indmap[res])
 
     tp = 0
     tn = 0
@@ -587,21 +607,21 @@ def load_sml_tasks(path: str, task: str):
     owlpath = "{}/owl/data/{}.owl".format(basepath, task)
 
     print("== Loading {} for benchmark {}".format(owlpath, task))
-    A, indmap, _ = structure_from_owl(owlpath)
+    A = structure_from_owl(owlpath)
 
-    res: dict[str, tuple[str, Structure, list[int], list[int], dict[str, int]]] = {}
+    res: dict[str, tuple[str, Structure, list[int], list[int]]] = {}
     for lp in os.listdir("{}/owl/lp".format(basepath)):
 
         pospath = "{}/owl/lp/{}/pos.txt".format(basepath, lp)
         negpath = "{}/owl/lp/{}/neg.txt".format(basepath, lp)
 
         with open(pospath, encoding="UTF-8") as file:
-            P = [indmap[line.rstrip()] for line in file.readlines()]
+            P = [map_ind_name(A, line.rstrip()) for line in file.readlines()]
 
         with open(negpath, encoding="UTF-8") as file:
-            N = [indmap[line.rstrip()] for line in file.readlines()]
+            N = [map_ind_name(A, line.rstrip()) for line in file.readlines()]
 
-        res[lp] = (owlpath, A, P, N, indmap)
+        res[lp] = (owlpath, A, P, N)
     return res
 
 
@@ -620,7 +640,7 @@ def generate_benchmark_collection(path, prefix, owlfile, concepts, size_bound: i
     current_query = 1
 
     examples = {}
-    for (info, pC, nCs) in concepts:
+    for info, pC, nCs in concepts:
         name = "{}-{}-{}".format(prefix, info, size_bound)
         benchmarks.add(name)
 
@@ -675,15 +695,15 @@ def class_string(cn: str) -> str:
     return '    <rdf:type rdf:resource="{}"/>\n'.format(encode(cn))
 
 
-def construct_owl_from_structure(
-    filename, A: Structure, indmap: dict[str, int], nsmap: dict[str | None, str]
-):
+def construct_owl_from_structure(filename, A: Structure):
     sigma: Signature = non_empty_symbols(A)
 
     reverse_indmap = {
-        n: name for (name, n) in indmap.items() if "#" in name or "/" in name or "NC_" in name
+        n: name
+        for (name, n) in A.indmap.items()
+        if "#" in name or "/" in name or "NC_" in name
     }
-    reverse_nsmap = {ns: key for (key, ns) in nsmap.items() if key != None}
+    reverse_nsmap = {ns: key for (key, ns) in A.nsmap.items() if key != None}
 
     rev_cns = {a: set() for a in ind(A)}
     for cn in conceptnames(sigma):
@@ -692,14 +712,14 @@ def construct_owl_from_structure(
 
     with open(filename, "w") as file:
         file.write('<?xml version="1.0"?> \n <rdf:RDF ')
-        for (key, ns) in nsmap.items():
+        for key, ns in A.nsmap.items():
             if key == None:
                 file.write('    xmlns="{}"\n'.format(ns))
             else:
                 file.write('    xmlns:{}="{}"\n'.format(key, ns))
         file.write(">\n")
         file.write(
-            '<owl:Ontology rdf:about="{}"/>\n'.format(nsmap[None].replace("#", ""))
+            '<owl:Ontology rdf:about="{}"/>\n'.format(A.nsmap[None].replace("#", ""))
         )
 
         for cn in conceptnames(sigma):
@@ -718,11 +738,11 @@ def construct_owl_from_structure(
             for cn in rev_cns[a]:
                 file.write(class_string(cn))
 
-            for (b, r) in A[2][a]:
-                for (ns, key) in reverse_nsmap.items():
+            for b, r in A.rn_ext[a]:
+                for ns, key in reverse_nsmap.items():
                     r = r.replace(ns, "{}:".format(key))
-                if nsmap[None] in r:
-                    r = r.replace(nsmap[None], "")
+                if A.nsmap[None] in r:
+                    r = r.replace(A.nsmap[None], "")
 
                 file.write(
                     '    <{} rdf:resource="{}"/>\n'.format(r, encode(reverse_indmap[b]))
@@ -784,7 +804,7 @@ def construct_owl_from_concepts(
                 )
             )
 
-            for (r, c2) in c:
+            for r, c2 in c:
                 if c2 == None:
                     file.write(
                         '    <rdf:type rdf:resource="http://example.com/test#{}"/>\n'.format(
@@ -855,7 +875,7 @@ def parse_eltl_conj(parts: list[str]) -> tuple[Concept, list[str]]:
 def cn_signature(c: Concept) -> set[str]:
     res = set()
 
-    for (rn, c1) in c:
+    for rn, c1 in c:
         res.add(rn)
         if c1 != None:
             res |= cn_signature(c1)
@@ -865,13 +885,13 @@ def cn_signature(c: Concept) -> set[str]:
 # is d stronger than c
 @functools.cache
 def subsum(c: Concept, d: Concept) -> bool:
-    for (rn, c1) in c:
+    for rn, c1 in c:
         if c1 == None:  # Conceptname
             if (rn, None) not in d:
                 return False
         else:
             found = False
-            for (rn2, d1) in d:
+            for rn2, d1 in d:
                 if rn != rn2:
                     continue
                 if subsum(c1, d1):
@@ -886,7 +906,7 @@ def subsum(c: Concept, d: Concept) -> bool:
 def is_addition_still_core(base: Concept, rn, add) -> bool:
     if not cn_signature(add).issubset(cn_signature(base)):
         return True
-    for (rn2, d) in base:
+    for rn2, d in base:
         if d == None or rn2 != rn:
             continue
         if subsum(add, d):
@@ -896,7 +916,7 @@ def is_addition_still_core(base: Concept, rn, add) -> bool:
 
 
 def core_frontier(c: Concept) -> Generator[Concept, None, None]:
-    for (rn, d) in c:
+    for rn, d in c:
         base: Concept = c - {(rn, d)}
         if not d:  # Conceptname
             yield base
@@ -977,11 +997,11 @@ def remove_random_atom(c: Concept) -> Concept:
     A = concept2structure(c)
 
     atoms = []
-    for cn in A[1].keys():
-        for i in range(len(A[1][cn])):
+    for cn in A.cn_ext.keys():
+        for i in range(len(A.cn_ext[cn])):
             atoms.append(cn)
-    for a in A[2].keys():
-        for i in range(len(A[2][a])):
+    for a in A.rn_ext.keys():
+        for i in range(len(A.rn_ext[a])):
             atoms.append(a)
 
     if len(atoms) == 0:
@@ -989,12 +1009,12 @@ def remove_random_atom(c: Concept) -> Concept:
         return c
 
     atom = random.choice(atoms)
-    if atom in A[1].keys():
-        elem = random.choice(list(A[1][atom]))
-        A[1][atom].remove(elem)
-    elif atom in A[2].keys():
-        elem = random.choice(list(A[2][atom]))
-        A[2][atom].remove(elem)
+    if atom in A.cn_ext.keys():
+        elem = random.choice(list(A.cn_ext[atom]))
+        A.cn_ext[atom].remove(elem)
+    elif atom in A.rn_ext.keys():
+        elem = random.choice(list(A.rn_ext[atom]))
+        A.rn_ext[atom].remove(elem)
 
     # This should ignore disconnected parts
     return structure2concept(A)
@@ -1006,7 +1026,7 @@ def execute_sml_bench(path, task):
     tasks = load_sml_tasks(path, task)
 
     time_parsed = time.process_time()
-    for (lpname, (owlfile, A, P, N, indmap)) in tasks.items():
+    for lpname, (owlfile, A, P, N) in tasks.items():
         print("== Starting incremental solving of {} {}".format(task, lpname))
         time_start_solve = time.process_time()
 

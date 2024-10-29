@@ -39,7 +39,7 @@ def compute_successors(sigma: Signature, A: Structure):
         succs[rn] = {a: set() for a in ind(A)}
 
     for a in ind(A):
-        for (b, rn) in A[2][a]:
+        for b, rn in A.rn_ext[a]:
             if rn in rolenames(sigma):
                 succs[rn][a].add(b)
     return succs
@@ -168,7 +168,7 @@ def simulation_constraints(
         for pInd2 in range(pInd + 1, size):
             for a in ind(A):
                 yield (-DR[pInd][pInd2][a], pi[pInd][pInd2])
-                for (b, rn) in A[2][a]:
+                for b, rn in A.rn_ext[a]:
                     if rn in rolenames(sigma):
                         yield (-DR[pInd][pInd2][a], -pr[rn][pInd2], -simul[pInd2][b])
 
@@ -241,20 +241,21 @@ def model2fitting_query(
     hc = mapping.hc
 
     q = Structure(
-        (
-            size,
-            {cn: set() for cn in conceptnames(sigma)},
-            {a: set() for a in range(size)},
-        )
+        max_ind=size,
+        cn_ext={cn: set() for cn in conceptnames(sigma)},
+        rn_ext={a: set() for a in range(size)},
+        indmap={},
+        nsmap={},
     )
+
     for pInd in range(size):
         for cn in conceptnames(sigma):
             if hc[cn][pInd] in model:
-                q[1][cn].add(pInd)
+                q.cn_ext[cn].add(pInd)
         for pInd2 in range(pInd + 1, size):
             for rn in rolenames(sigma):
                 if pi[pInd][pInd2] in model and pr[rn][pInd2] in model:
-                    q[2][pInd].add((pInd2, rn))
+                    q.rn_ext[pInd].add((pInd2, rn))
     return q
 
 
@@ -361,10 +362,10 @@ def create_coverage_formula(
 
 
 def non_empty_symbols(A: Structure) -> Signature:
-    cns = [cn for cn in A[1].keys() if A[1][cn]]
+    cns = [cn for cn in A.cn_ext.keys() if A.cn_ext[cn]]
     rns: set[str] = set()
     for a in ind(A):
-        for (_, rn) in A[2][a]:
+        for _, rn in A.rn_ext[a]:
             rns.add(rn)
     rns2 = list(rns)
 
@@ -482,7 +483,6 @@ def solve(
     return best_sol
 
 
-
 # Search for a small separating query by incrementally increasing the size
 def solve_incr(
     A: Structure,
@@ -495,7 +495,7 @@ def solve_incr(
     time_start = time.process_time()
     i = 1
     best_coverage = len(P)
-    best_q = Structure((1, {}, {0: set()}))
+    best_q = Structure(max_ind=1, cn_ext={}, rn_ext={0: set()}, indmap={}, nsmap={})
     dt = time.process_time() - time_start
     while (
         best_coverage < len(P) + len(N)

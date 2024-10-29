@@ -1,11 +1,20 @@
+from dataclasses import dataclass
 import functools
 
 from lxml import etree
 
 from . import o2p_ontology, o2p_owl_parser
-from .o2p_ontology import (ClassIdentifier, Intersection, NameFactory,
-                           Ontology, Restriction, SomeValues, SubClassOf,
-                           Thing, TopClass)
+from .o2p_ontology import (
+    ClassIdentifier,
+    Intersection,
+    NameFactory,
+    Ontology,
+    Restriction,
+    SomeValues,
+    SubClassOf,
+    Thing,
+    TopClass,
+)
 
 namespaces = {
     "owl": "http://www.w3.org/2002/07/owl#",
@@ -14,14 +23,19 @@ namespaces = {
 }
 
 Signature = tuple[list[str], list[str]]
-Structure = tuple[int,
-                  dict[str, set[int]],
-                  dict[int, set[tuple[int, str]]]
-            ]
+
+
+@dataclass(slots=True)
+class Structure:
+    max_ind: int
+    cn_ext: dict[str, set[int]]
+    rn_ext: dict[int, set[tuple[int, str]]]
+    indmap: dict[str, int]
+    nsmap: dict[str | None, str]
 
 
 def ind(A: Structure) -> range:
-    return range(A[0])
+    return range(A.max_ind)
 
 
 def conceptnames(sigma: Signature) -> list[str]:
@@ -33,7 +47,7 @@ def rolenames(sigma: Signature) -> list[str]:
 
 
 def conceptname_ext(A: Structure, cn: str) -> set[int]:
-    return A[1][cn]
+    return A.cn_ext[cn]
 
 
 def expand_namespace(namespace: str, item: str):
@@ -53,12 +67,18 @@ def name2sparql(name: str):
     return "<{}>".format(name)
 
 
-def alt_name(name: str):
-    s = name.split("/")
-    a = s[len(s) - 1]
-    res = a.replace("#", ".")
-    assert name != res
-    return res
+def expand_curie(curie, nsmap):
+    assert ":" in curie
+    s = curie.split(":")
+    assert s[0] in nsmap
+    s[0] = nsmap[s[0]]
+    return "".join(s)
+
+
+def map_ind_name(A: Structure, name: str) -> int:
+    if "://" not in name and ":" in name:
+        name = expand_curie(name, A.nsmap)
+    return A.indmap[name]
 
 
 def add_ns(n: str):
@@ -75,23 +95,22 @@ class ABoxBuilder:
 
     def __init__(self):
         self.indmap = {}
-        self.A = Structure((0, {}, {}))
+        self.A = Structure(max_ind=0, cn_ext={}, rn_ext={}, indmap={}, nsmap={})
 
     def map_ind(self, a: str):
         if a not in self.indmap:
-            n = self.A[0]
+            n = self.A.max_ind
             self.indmap[a] = n
-            if "/" in a or "#" in a:
-                self.indmap[alt_name(a)] = n
-            self.A = Structure((n + 1, self.A[1], self.A[2]))
-            self.A[2][n] = set()
+            self.A.max_ind += 1
+            self.A.rn_ext[n] = set()
+            self.A.indmap[a] = n
 
         return self.indmap[a]
 
     def declare_cn(self, cn):
         assert "{" not in cn
-        if cn not in self.A[1]:
-            self.A[1][cn] = set()
+        if cn not in self.A.cn_ext:
+            self.A.cn_ext[cn] = set()
         return
 
     def declare_rn(self, rn):
@@ -100,7 +119,7 @@ class ABoxBuilder:
 
     def concept_assertion(self, a: int, concept: str):
         self.declare_cn(concept)
-        self.A[1][concept].add(a)
+        self.A.cn_ext[concept].add(a)
 
     def role_assertion(self, idx1: int, ind2: str, role: str):
         assert "{" not in role
@@ -109,7 +128,7 @@ class ABoxBuilder:
         if not idx2:
             idx2 = self.map_ind(ind2)
 
-        self.A[2][idx1].add((idx2, role))
+        self.A.rn_ext[idx1].add((idx2, role))
 
 
 tag_onto = expand_namespace("owl", "Ontology")
@@ -137,7 +156,7 @@ def load_owl(file: str):
 
     abox.declare_cn("http://www.w3.org/2002/07/owl#NamedIndividual")
 
-    for (_, elem) in etree.iterparse(file, events=("end",), remove_blank_text=True):
+    for _, elem in etree.iterparse(file, events=("end",), remove_blank_text=True):
         # We are only interested in top-level statements
         if elem.getparent() != None and elem.getparent().getparent() != None:
             continue
@@ -195,19 +214,20 @@ def load_owl(file: str):
             elem.clear()
 
     num = len(abox.indmap)
+    abox.A.nsmap = nsmap
     print("\rLoaded {} individuals and {} facts".format(num, facts))
-    return onto, abox, nsmap
+    return onto, abox
 
 
 @functools.cache
-def structure_from_owl(file) -> tuple[Structure, dict[str, int], dict[str | None, str]]:
-    onto, abox, nsmap = load_owl(file)
+def structure_from_owl(file) -> Structure:
+    onto, abox = load_owl(file)
     tbox = construct_normalized_tbox(onto)
     tbox.saturate()
 
     compact_canonical_model(abox, tbox)
 
-    return abox.A, abox.indmap, nsmap
+    return abox.A
 
 
 # ELTBox
@@ -333,7 +353,7 @@ class TBox:
         # Add implied domain restrictions
         for B in self.cns:
             toAdd = set()
-            for (r, A) in self.rBlhs[B]:
+            for r, A in self.rBlhs[B]:
                 for s in self.rns:
                     if r != s and r in self.role_incs[s]:
                         toAdd.add((s, A))
@@ -347,9 +367,9 @@ class TBox:
         # A \sqsubseteq \exists r.B and \exists r-.\top implies C
         # It follows that
         # A \sqsubseteq \exists r.X and X \sqsubseteq B \sqcap C
-        for (A, S) in list(self.rBrhs.items()):
+        for A, S in list(self.rBrhs.items()):
             to_add = set()
-            for (r, B) in S:
+            for r, B in S:
                 if r not in self.ranges.keys():
                     continue
                 X = self.fresh_cn()
@@ -357,7 +377,7 @@ class TBox:
                 for C in self.ranges[r]:
                     self.add_axiom1(X, C)
                 to_add.add((r, X))
-            for (r, X) in to_add:
+            for r, X in to_add:
                 self.add_axiom3(A, r, X)
 
         # TODO: implement faster algorithm
@@ -388,8 +408,8 @@ class TBox:
             for A in self.non_empty_rhs():
                 for B in self.non_empty_lhs():
                     if B not in self.implic[A]:
-                        for (r, A1) in self.rBrhs[A]:
-                            for (r2, B1) in self.rBlhs[B]:
+                        for r, A1 in self.rBrhs[A]:
+                            for r2, B1 in self.rBlhs[B]:
                                 if r == r2 and B1 in self.implic[A1]:
                                     self.add_axiom1(A, B)
                                     change = True
@@ -502,7 +522,11 @@ def construct_normalized_tbox(onto: Ontology):
             )
         )
 
-    print("Loaded {} concept names, {} role names, {} concept inclusions".format(len(t.cns), len(t.rns), cis))
+    print(
+        "Loaded {} concept names, {} role names, {} concept inclusions".format(
+            len(t.cns), len(t.rns), cis
+        )
+    )
     return t
 
 
@@ -523,14 +547,14 @@ def compact_canonical_model(abox: ABoxBuilder, tbox: TBox):
 
     # Apply range restrictions to ABox
     for a in ind(abox.A):
-        for (b, r) in abox.A[2][a]:
+        for b, r in abox.A.rn_ext[a]:
             if r in tbox.ranges.keys():
                 for B in tbox.ranges[r]:
                     abox.concept_assertion(b, B)
 
     rev_succs: dict[int, dict[str, set[int]]] = {b: {} for b in ind(abox.A)}
     for a in ind(abox.A):
-        for (b, r) in abox.A[2][a]:
+        for b, r in abox.A.rn_ext[a]:
             if r not in rev_succs[b]:
                 rev_succs[b][r] = set()
             rev_succs[b][r].add(a)
@@ -540,8 +564,8 @@ def compact_canonical_model(abox: ABoxBuilder, tbox: TBox):
     change = True
     while change:
         change = False
-        for (A, S) in tbox.rBlhs.items():
-            for (r, B) in S:
+        for A, S in tbox.rBlhs.items():
+            for r, B in S:
                 B_ext = set(conceptname_ext(abox.A, B))
                 for b in B_ext:
                     if r not in rev_succs[b]:
@@ -553,34 +577,33 @@ def compact_canonical_model(abox: ABoxBuilder, tbox: TBox):
                                 abox.concept_assertion(a, C)
 
     # Create an anonymous individual for every \exists r. B on the rhs CIs
-    for (A, S) in tbox.rBrhs.items():
-        for (r, B) in S:
+    for A, S in tbox.rBrhs.items():
+        for r, B in S:
             idx = abox.map_ind(B)
             for C in tbox.implic[B]:
                 abox.concept_assertion(idx, C)
 
     # Connect anonymous individuals
-    for (A, S) in tbox.rBrhs.items():
-        for (r, B) in S:
+    for A, S in tbox.rBrhs.items():
+        for r, B in S:
             for a in conceptname_ext(abox.A, A):
                 abox.role_assertion(a, B, r)
 
     # Saturate with role inclusions
     for a in ind(abox.A):
         toadd = set()
-        for (b, r) in abox.A[2][a]:
+        for b, r in abox.A.rn_ext[a]:
             for s in tbox.role_incs[r]:
                 toadd.add((b, s))
-        abox.A[2][a] |= toadd
+        abox.A.rn_ext[a] |= toadd
 
     # Remove fresh concept names from model
     for A in tbox.fresh_names:
-        abox.A[1][A] = set()
+        abox.A.cn_ext[A] = set()
 
 
 def structure_to_dot(A: Structure, indmap: dict[str, int]):
     print("digraph D {")
-
 
     for name, val in indmap.items():
         if "#" in name:
@@ -589,7 +612,7 @@ def structure_to_dot(A: Structure, indmap: dict[str, int]):
             print('N{} [label="{}"];'.format(val, name))
 
     for a in ind(A):
-        for (b, r) in A[2][a]:
+        for b, r in A.rn_ext[a]:
             if "#" in r:
                 r = r.split("#")[1]
             print('N{} -> N{} [label="{}"];'.format(a, b, r))
@@ -604,10 +627,10 @@ def solution2sparql(q: Structure):
     clauses: list[str] = []
 
     for a in ind(q):
-        for cn in q[1].keys():
-            if a in q[1][cn] and not_owl_thing(name2sparql(cn)):
+        for cn in q.cn_ext.keys():
+            if a in q.cn_ext[cn] and not_owl_thing(name2sparql(cn)):
                 clauses.append("?{} a {} .".format(a, name2sparql(cn)))
-        for (b, rn) in q[2][a]:
+        for b, rn in q.rn_ext[a]:
             clauses.append("?{} {} ?{} .".format(a, name2sparql(rn), b))
 
     if len(clauses) == 0:
@@ -619,7 +642,7 @@ def solution2sparql(q: Structure):
 # Returns A restricted to individuals that can be reached in k steps from a
 # Renames individuals
 def restrict_to_neighborhood(k: int, A: Structure, starts: list[int]):
-    cns = [cn for cn in A[1].keys() if A[1][cn]]
+    cns = [cn for cn in A.cn_ext.keys() if A.cn_ext[cn]]
 
     # This has its own distance calculation to avoid computing the distance
     # for the entirety of A
@@ -628,7 +651,7 @@ def restrict_to_neighborhood(k: int, A: Structure, starts: list[int]):
     for r in range(k):
         step = set()
         for i1 in inds:
-            for (i2, rn) in A[2][i1]:
+            for i2, rn in A.rn_ext[i1]:
                 step.add(i2)
         inds = inds.union(step)
         for i in step:
@@ -639,22 +662,28 @@ def restrict_to_neighborhood(k: int, A: Structure, starts: list[int]):
 
     mapping = {old_ind: new_ind for (new_ind, old_ind) in enumerate(inds)}
 
+    n_indmap = {
+        name: mapping[old_ind]
+        for name, old_ind in A.indmap.items()
+        if old_ind in mapping
+    }
+
     B = Structure(
-        (
-            len(inds),
-            {cn: set() for cn in cns},
-            {a: set() for a in range(len(inds))},
-        )
+        max_ind=len(inds),
+        cn_ext={cn: set() for cn in cns},
+        rn_ext={a: set() for a in range(len(inds))},
+        indmap=n_indmap,
+        nsmap=A.nsmap,
     )
 
     for cn in cns:
-        B[1][cn] = {mapping[ind] for ind in A[1][cn] & inds}
+        B.cn_ext[cn] = {mapping[ind] for ind in A.cn_ext[cn] & inds}
 
     for i1 in inds:
-        B[2][mapping[i1]] = set()
-        for (i2, rn) in A[2][i1]:
+        B.rn_ext[mapping[i1]] = set()
+        for i2, rn in A.rn_ext[i1]:
             if i2 in inds and dist[i1] < k:
-                B[2][mapping[i1]].add((mapping[i2], rn))
+                B.rn_ext[mapping[i1]].add((mapping[i2], rn))
 
     return (B, mapping)
 
@@ -698,11 +727,13 @@ def levels_to_preds(layout: list[int]) -> list[int]:
 
 def copy_structure(A: Structure) -> Structure:
     cns = {}
-    for cn in A[1].keys():
-        cns[cn] = set(A[1][cn])
+    for cn in A.cn_ext.keys():
+        cns[cn] = set(A.cn_ext[cn])
 
     rns = {}
     for a in ind(A):
-        rns[a] = set(A[2][a])
-
-    return (A[0], cns, rns)  # TODO: not a deep copy
+        rns[a] = set(A.rn_ext[a])
+    # TODO not a deep copy
+    return Structure(
+        max_ind=A.max_ind, cn_ext=cns, rn_ext=rns, indmap=A.indmap, nsmap=A.nsmap
+    )
