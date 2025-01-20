@@ -1,7 +1,8 @@
 import sys
 import time
 import argparse
-from spell.fitting import solve_incr, mode
+from spell.fitting import solve_incr, mode, restrict_nb
+from spell.fitting_alc import *
 
 from spell.structures import solution2sparql, structure_from_owl
 
@@ -76,6 +77,14 @@ def main():
 
     print("== Starting incremental search search for fitting query")
     time_start_solve = time.process_time()
+
+    
+
+    for i in range(1, 10):
+        A2, P2, N2 = restrict_nb(i, A, P, N)
+        f = FittingALC(A2, i, P2, N2, op = {AND, OR, EX, NEG})
+        f.solve()
+
 
     _, res = solve_incr(A, P, N, md, timeout=args.timeout, max_size=args.max_size)
 
