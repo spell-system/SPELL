@@ -16,8 +16,9 @@ def run(kb_path, P, N):
     typed_pos = set(map(OWLNamedIndividual, map(IRI.create, P)))
     typed_neg = set(map(OWLNamedIndividual, map(IRI.create, N)))
     lp = PosNegLPStandard(pos=typed_pos, neg=typed_neg)
-    end = start = time.time()
-    print(f"KB parsed after {end-start} seconds, starting CELOE next.")
+    end = time.time()
+    kb_parse_time = end - start
+    print(f"KB parsed after {kb_parse_time} seconds, starting CELOE next.")
     start = time.time()
     qual = Accuracy()
     heur = CELOEHeuristic(expansionPenaltyFactor=0.05, startNodeBonus=1.0, nodeRefinementPenalty=0.01)
@@ -36,7 +37,8 @@ def run(kb_path, P, N):
                                 hypotheses=hypotheses)    
     [print(x) for x in hypotheses]
     end= time.time()
-    print(end-start)
+    print(f"Time for running CELOE: {end-start}")
+    print(f"Total time: {end-start+kb_parse_time} seconds")
 
 
 def main():
