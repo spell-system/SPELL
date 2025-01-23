@@ -8,7 +8,7 @@ from spell.structures import map_ind_name, structure_from_owl
 #only female children
 Q1 = """
 SELECT DISTINCT ?0 WHERE {
-    ?0 ?1 ?2.
+    ?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>.
         FILTER NOT EXISTS {
             ?0 <http://schema.org/children> ?3.
                 FILTER NOT EXISTS {
@@ -23,6 +23,7 @@ SELECT DISTINCT ?0 WHERE {
 # at least one child and only female children
 Q2 = """
 SELECT DISTINCT ?0 WHERE {
+    ?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>.
     ?0 <http://schema.org/children> ?2.
         FILTER NOT EXISTS {
             ?0 <http://schema.org/children> ?3.
