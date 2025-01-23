@@ -93,17 +93,18 @@ class STreeNode():
 class FittingALC:
     def __init__(self, A: Structure, k : int, P: list[int],
         N: list[int], op = ALC_OP, cov_p = - 1, cov_n = -1):
-        self.A = A
+        B,m = restrict_to_neighborhood(k-1,A,P + N)
+        self.P = [m[a] for a in P]
+        self.N = [m[b] for b in N]
+        self.A = B
         self.sigma = determine_relevant_symbols(A, P, 1, k - 1)
-        self.k = k        
+        self.k = k
         self.op = op
         self.op_b = ALC_OP_B.intersection(op)
         self.op_r = op.difference(ALC_OP_B)
         self.tree_node_symbols = dict()#{d_op} d_op.copy()
         self.vars = self._vars()
-        self.n_op = len(op)
-        self.P = P
-        self.N = N
+        self.n_op = len(op)        
         self.cov_p = len(P) if cov_p == -1 else cov_p
         self.cov_n = len(N) if cov_n == -1 else cov_n        
         self.solver = Glucose4()
@@ -173,7 +174,7 @@ class FittingALC:
                         self.solver.add_clause((-v1,-v2))
         for i in range(self.k):
             for r in self.sigma[1]:
-                for op in self.op_r:                    
+                for op in self.op_r:
                     self.solver.add_clause([-(self.vars[X,op,r]+i)] + [self.vars[V,1,i]+j for j in range(i+1,self.k)])
             if NEG in self.op_b:
                 self.solver.add_clause([-(self.vars[X,NEG]+i)] + [self.vars[V,1,i]+j for j in range(i+1,self.k)])
@@ -231,7 +232,7 @@ class FittingALC:
                     for a in range(self.A.max_ind):
                         self.solver.add_clause((-(self.vars[U,NEG,i,a]+j), self.vars[Y,i]+j))
                         self.solver.add_clause((-(self.vars[U,NEG,i,a]+j), -(self.vars[Z,a]+j)))
-                        self.solver.add_clause((self.vars[U,NEG,i,a]+j,-(self.vars[Y,i]+j), self.vars[Z,a]+j)) 
+                        self.solver.add_clause((self.vars[U,NEG,i,a]+j,-(self.vars[Y,i]+j), self.vars[Z,a]+j))
         if AND in self.op:
             for i in range(self.k):
                 for j in range(self.k):
@@ -299,6 +300,24 @@ class FittingALC:
         else:
             print("Not satisfiable")
             return False
+    
+    def solve_incr(self,max_k,start_k=1):
+        sat = False
+        self.k = start_k
+        while not sat and self.k <= max_k:            
+            self.solver = Glucose4()
+            self.vars = self._vars()
+            self._syn_tree_encoding()
+            self._evaluation_constraints()
+            self._additional_constraints()
+            self._fitting_constraints()               
+            if self.solver.solve():
+                print(f"Satisfiable for k={self.k}")
+                print(self._modelToTree())
+                sat = True
+            else:
+                print(f"Not satisfiable for k={self.k}")             
+                self.k += 1   
 
     def printVariables(self):
         if self.solver.get_model():
@@ -326,7 +345,7 @@ class FittingALC:
         m = self.solver.get_model()
         xv = sorted(list(filter(lambda x : x> 0, m[:self.vars[Y,0]-1])),key = lambda i : (i-1)%self.k)                
         edges = {i : [] for i in range(self.k)}
-        x_symbols = [None] * self.k        
+        x_symbols = [None] * self.k
         for x in m[:self.vars[Y,0]-1]:
             if x>0:
                 i = (x-1)%(self.k)                

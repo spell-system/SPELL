@@ -67,12 +67,12 @@ N5 = []
 A6 = Structure(
     3,
     {
-        "A":{0},
-        "B":{1}
+        "A":{1},
+        "B":{0,1}
     },{i : {} for i in range(3)},{},{}
                )
-P6 = []
-N6 = [0,1]
+P6 = [0]
+N6 = [1]
 
 def main():
     i1 = (A1,3,P1,N1)   
@@ -81,8 +81,9 @@ def main():
     i4 = (A4,3,P4,N4)
     i5 = (A5, 1, P5, N5)
     i6 = (A6, 3, P6, N6)    
-    f = FittingALC(*i1, op = {AND,OR,EX,ALL})
-    f.solve()        
+    f = FittingALC(*i1, op = {EX,ALL,OR,AND})
+    f.solve()
+    #f.printVariables()
     
 
 if __name__ == "__main__":
