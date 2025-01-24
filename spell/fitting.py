@@ -377,7 +377,7 @@ def non_empty_symbols(A: Structure) -> Signature:
 # Returns the (concept and role) symbols that are relevant given the positive
 # examples
 def determine_relevant_symbols(
-    A: Structure, P: list[int], minP: int, dist: int
+    A: Structure, P: list[int], minP: int, dist: int, N: list[int] = []
 ) -> Signature:
 
     (cns, rns) = non_empty_symbols(A)
@@ -393,8 +393,18 @@ def determine_relevant_symbols(
         for rn in rns2:
             countr[rn] += 1
 
-    cns = list(cn for (cn, c) in count.items() if c >= minP)
+    if N:
+        # TODO(mfunk): this is a hack to include symbols that are reachable
+        # from negative examples. Make this smarter in the future
+        for n in N:
+            (A2, _) = restrict_to_neighborhood(dist, A, [n])
+            (cns2, rns2) = non_empty_symbols(A2)
+            for cn in cns2:
+                count[cn] += minP
+            for rn in rns2:
+                countr[rn] += minP
 
+    cns = list(cn for (cn, c) in count.items() if c >= minP)
     rns = list(rn for (rn, c) in countr.items() if c >= minP)
     cns.sort(key="{}".format)
     rns.sort(key="{}".format)

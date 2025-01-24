@@ -97,7 +97,7 @@ class FittingALC:
         self.P = [m[a] for a in P]
         self.N = [m[b] for b in N]
         self.A = B
-        self.sigma = determine_relevant_symbols(A, P, 1, k - 1)
+        self.sigma = determine_relevant_symbols(A, P, 1, k - 1, N)
         self.k = k
         self.op = op
         self.op_b = ALC_OP_B.intersection(op)
