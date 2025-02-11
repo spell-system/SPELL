@@ -101,5 +101,39 @@ def test6():
     f = FittingALC(*i, op = {EX,ALL,OR,AND,NEG})
     assert f.solve()
 
+def testEx():
+    A = Structure(
+        5,
+        {"A":{2, 4, 5}, "B":{3}},
+        { 0 : { (2, "r"), (3, "r")}, 1: {(4, "r"), (5, "r")}, 2: {}, 3: {}, 4: {}, 5:{}},
+        {},
+        {}
+    )
+
+    i = (A, 2, [0], [1])
+    f = FittingALC(*i, op = {EX})
+    assert f.solve()
+    
+    i2 = (A, 2, [1], [0])
+    f2 = FittingALC(*i2, op = {EX})
+    assert not f2.solve()
+
+def testAll():
+    A = Structure(
+        5,
+        {"A":{2, 4, 5}, "B":{3}},
+        { 0 : { (2, "r"), (3, "r")}, 1: {(4, "r"), (5, "r")}, 2: {}, 3: {}, 4: {}, 5:{}},
+        {},
+        {}
+    )
+
+    i = (A, 2, [0], [1])
+    f = FittingALC(*i, op = {ALL})
+    assert not f.solve()
+    
+    i2 = (A, 2, [1], [0])
+    f2 = FittingALC(*i2, op = {ALL})
+    assert f2.solve()
+
 
 test6()
