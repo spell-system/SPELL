@@ -4,6 +4,7 @@ import sys
 import os
 
 from spell import fitting
+from spell import fitting_alc
 from spell import structures
 
 def read_config(path):
@@ -35,14 +36,21 @@ for file in os.listdir(data_dir):
 
 assert owl_file_path
 
-A, indmap, _ = structures.structure_from_owl(owl_file_path)
+A = structures.structure_from_owl(owl_file_path)
 
 
 with open(pos_ex, encoding="UTF-8") as file:
-    P = [indmap[line.rstrip()] for line in file.readlines()]
+    P = [A.indmap[line.rstrip()] for line in file.readlines()]
 
 with open(neg_ex, encoding="UTF-8") as file:
-    N = [indmap[line.rstrip()] for line in file.readlines()]
+    N = [A.indmap[line.rstrip()] for line in file.readlines()]
+
+
+for i in range(1, 10):
+    A2, P2, N2 = fitting.restrict_nb(i, A, P, N)
+    f = fitting_alc.FittingALC(A2, i, P2, N2, op = {fitting_alc.AND, fitting_alc.OR, fitting_alc.EX, fitting_alc.NEG})
+    f.solve()
+
 
 _, best_q = fitting.solve_incr(A, P, N, fitting.mode.exact)
 

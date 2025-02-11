@@ -48,8 +48,8 @@ with open(input_file, encoding="UTF-8") as file:
     for line in file:
         sparql += line + "\n"
 
-A, indmap, nsmap = benchmark_tools.structure_from_owl(owl_file_path)
-benchmark_tools.construct_owl_from_structure("tmp.owl", A, indmap, nsmap)
+A = benchmark_tools.structure_from_owl(owl_file_path)
+benchmark_tools.construct_owl_from_structure("tmp.owl", A)
 
 result = benchmark_tools.query_owl("tmp.owl", sparql)
 
