@@ -18,7 +18,7 @@ from .structures import (
     solution2sparql,
 )
 
-mode = Enum("mode", "exact neg_approx full_approx")
+mode = Enum("mode", "exact neg_approx full_approx alc")
 
 HC = dict[str, list[int]]
 Simul = list[list[int]]
