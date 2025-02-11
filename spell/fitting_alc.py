@@ -174,44 +174,48 @@ class FittingALC:
                         self.solver.add_clause((-v1,-v2))
 
         for i in range(self.k):
+            v_vars = [self.vars[V, 1, i] + j for j in range(i + 1, self.k)] + [self.vars[V, 2, i] + j for j in range(i + 1, self.k)]
+
+            # At most one of the y-vars
+            for v1 in v_vars:
+                for v2 in v_vars:
+                    if v1 != v2:
+                        self.solver.add_clause((-v1,-v2))
+
             for r in self.sigma[1]:
                 for op in self.op_r:
                     self.solver.add_clause([-(self.vars[X,op,r]+i)] + [self.vars[V,1,i]+j for j in range(i+1,self.k)])
+                    for j in range(self.k):
+                        self.solver.add_clause([-(self.vars[X,op,r]+i), -(self.vars[V,2,i]+j)])
 
             if NEG in self.op_b:
                 self.solver.add_clause([-(self.vars[X,NEG]+i)] + [self.vars[V,1,i]+j for j in range(i+1,self.k)])
+                for j in range(self.k):
+                    self.solver.add_clause([-(self.vars[X,NEG]+i), -(self.vars[V,2,i]+j)])
             for op in self.op_b - {NEG}:
                 self.solver.add_clause([-(self.vars[X,op]+i)] + [self.vars[V,2,i]+j for j in range(i+1,self.k-1)])
-
-            for j in range(i + 1, self.k):
-                # self.solver.add_clause([-(self.vars[V, 2, i] + j)] + [self.vars[X, op] + i for op in self.op_b - {NEG}])
-                self.solver.add_clause([-(self.vars[V, 2, i] + j)] + [- self.vars[V, 1, i] + j])
-
-                # for r in self.sigma[1]:
-                #     for op in self.op_r:
-                #         self.solver.add_clause([-(self.vars[V, 2, i] + j)] + [- self.vars[X, op, r] + i])
-
-
+                for j in range(self.k):
+                    self.solver.add_clause([-(self.vars[X,op]+i), -(self.vars[V,1,i]+j)])
 
             for j in range(self.k):
                 for cn in self.sigma[0]:
-                    self.solver.add_clause((-(self.vars[X,cn]+i),-(self.vars[Y,i]+j)))
+                    self.solver.add_clause((-(self.vars[X,cn]+i),-(self.vars[V,1, i]+j)))
+                    self.solver.add_clause((-(self.vars[X,cn]+i),-(self.vars[V,2, i]+j)))
                 for b in {TOP,BOT}:
-                    self.solver.add_clause((-(self.vars[X,b]+i),-(self.vars[Y,i]+j)))
+                    self.solver.add_clause((-(self.vars[X,b]+i),-(self.vars[V,1,i]+j)))
+                    self.solver.add_clause((-(self.vars[X,b]+i),-(self.vars[V,2,i]+j)))
 
             for j1 in range(self.k):
-                if j1 > 0:
-                    self.solver.add_clause([ -(self.vars[Y, i] + j1), self.vars[V, 1, i] + j1, self.vars[V, 2, i] + j1, self.vars[V, 2, i] + (j1 - 1) ]) 
-                else:
-                    self.solver.add_clause([ -(self.vars[Y, i] + j1), self.vars[V, 1, i] + j1, self.vars[V, 2, i] + j1]) 
-
                 for j2 in range(self.k):
                     # Just one predecessor
                     if j1 != j2:
-                        self.solver.add_clause((-(self.vars[Y,j1]+i),-(self.vars[Y,j2]+i)))
-                    # if j1 is a successor, then a second successor must be j1 - 1 or j1 + 1
-                    if j2 not in {j1 - 1, j1, j1 + 1}:
-                        self.solver.add_clause((-(self.vars[Y,i]+j1),-(self.vars[Y,i]+j2)))
+                        self.solver.add_clause((-(self.vars[V,1,j1]+i),-(self.vars[V,1,j2]+i)))
+                        self.solver.add_clause((-(self.vars[V,1,j1]+i),-(self.vars[V,2,j2]+i)))
+                        self.solver.add_clause((-(self.vars[V,1,j1]+i),-(self.vars[V,2,j2]+i - 1)))
+
+                        self.solver.add_clause((-(self.vars[V,2,j1]+i),-(self.vars[V,1,j2]+i)))
+                        self.solver.add_clause((-(self.vars[V,2,j1]+i),-(self.vars[V,2,j2]+i - 1)))
+                        self.solver.add_clause((-(self.vars[V,2,j1]+i),-(self.vars[V,2,j2]+i)))
 
 
     def _evaluation_constraints(self):
@@ -257,27 +261,6 @@ class FittingALC:
                         self.solver.add_clause((-(self.vars[X,cn]+i), self.vars[Z,a]+i))
                     else:
                         self.solver.add_clause((-(self.vars[X,cn]+i),-(self.vars[Z,a]+i)))
-                                    
-    def _additional_constraints(self):
-        for i in range(self.k):
-            for j in range(i + 1, self.k):
-                li = list(range(self.k))
-                li.remove(j)
-                #self.solver.add_clause([self.vars[V,1,i]+j, -(self.vars[Y,i]+j)]+[self.vars[Y,i]+l for l in li])
-                self.solver.add_clause((-(self.vars[V,1,i]+j), self.vars[Y,i]+j))                
-                for l in li:
-                    self.solver.add_clause((-(self.vars[V,1,i]+j),-(self.vars[Y,i]+l)))
-
-        for i in range(self.k):
-            for j in range(i + 1, self.k-1):
-                li = list(range(self.k))
-                li.remove(j)
-                li.remove(j+1)
-                #self.solver.add_clause([self.vars[V,2,i]+j, -(self.vars[Y,i]+j+1),-(self.vars[Y,i]+j+1)]+[self.vars[Y,i]+l for l in li])
-                self.solver.add_clause((-(self.vars[V,2,i]+j), self.vars[Y,i]+j))
-                self.solver.add_clause((-(self.vars[V,2,i]+j), self.vars[Y,i]+j+1))
-                for l in li:
-                    self.solver.add_clause((-(self.vars[V,2,i]+j),-(self.vars[Y,i]+l)))
 
     def _fitting_constraints(self):
         for a in self.P:
@@ -289,7 +272,6 @@ class FittingALC:
         #self._root()
         self._syn_tree_encoding()
         self._evaluation_constraints()
-        self._additional_constraints()
         self._fitting_constraints()               
         if self.solver.solve():
            print("Satisfiable:")
@@ -307,7 +289,6 @@ class FittingALC:
             self.vars = self._vars()
             self._syn_tree_encoding()
             self._evaluation_constraints()
-            self._additional_constraints()
             self._fitting_constraints()               
             if self.solver.solve():
                 print(f"Satisfiable for k={self.k}")
