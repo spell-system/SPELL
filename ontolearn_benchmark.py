@@ -1,4 +1,4 @@
-import sys, time
+import sys, time, json, os 
 from ontolearn.knowledge_base import KnowledgeBase
 from ontolearn.learners import CELOE
 from ontolearn.heuristics import CELOEHeuristic
@@ -8,7 +8,25 @@ from owlapy.owl_individual import OWLNamedIndividual, IRI
 from owlapy.class_expression import OWLClass
 from ontolearn.refinement_operators import ModifiedCELOERefinement
 
-from alc_benchmark import read_examples_from_json
+from alc_benchmark import read_examples_from_json, instance_to_dllearner
+
+def ontolearn_examples_to_dllearner(kb_path, ont_examples, dest, file_name_prefix):
+    with open(ont_examples) as f:
+        d = json.load(f)
+        for p in d["problems"]:
+            instance_to_dllearner(kb_path, d["problems"][p]["positive_examples"],d["problems"][p]["negative_examples"], os.path.join(dest,f"{file_name_prefix}_{p}"))
+
+def ontolearn_examples_to_flat_json(ont_examples, dest):    
+    with open(ont_examples) as f:
+        d = json.load(f)        
+        for p in d["problems"]:            
+            dn = dict()
+            dn["P"] = d["problems"][p]["positive_examples"]
+            dn["N"] = d["problems"][p]["negative_examples"]
+            dn["N_POS"] = len(dn["P"])
+            dn["N_NEG"] = len(dn["N"])
+            with open(os.path.join(dest,f"ol_ex_fam_rich_{p}.json"), "w+") as f:
+                json.dump(dn, f)
 
 def run(kb_path, P, N):
     start = time.time()
@@ -38,12 +56,14 @@ def run(kb_path, P, N):
     [print(x) for x in hypotheses]
     end= time.time()
     print(f"Time for running CELOE: {end-start}")
-    print(f"Total time: {end-start+kb_parse_time} seconds")
-
+    print(f"Total time: {end-start+kb_parse_time} seconds") 
+    return 0,hypotheses[0]
 
 def main():
     P,N = read_examples_from_json(sys.argv[2])
     run(sys.argv[1],P,N)
+    #ontolearn_examples_to_dllearner(sys.argv[1], sys.argv[2])
+    #ontolearn_examples_to_flat_json(sys.argv[1], sys.argv[2])
 
 if __name__ == "__main__":
     main()

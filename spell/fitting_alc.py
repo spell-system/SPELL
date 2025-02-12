@@ -102,11 +102,11 @@ class FittingALC:
         self.op = op
         self.op_b = ALC_OP_B.intersection(op)
         self.op_r = op.difference(ALC_OP_B)
-        self.tree_node_symbols = dict()#{d_op} d_op.copy()
+        self.tree_node_symbols = dict()
         self.vars = self._vars()
-        self.n_op = len(op)        
+        self.n_op = len(op)
         self.cov_p = len(P) if cov_p == -1 else cov_p
-        self.cov_n = len(N) if cov_n == -1 else cov_n        
+        self.cov_n = len(N) if cov_n == -1 else cov_n
         self.solver = Glucose4()
         
 
@@ -315,9 +315,11 @@ class FittingALC:
                 print(f"Satisfiable for k={self.k}")
                 print(self._modelToTree())
                 sat = True
+                return self.k, self._modelToTree()
             else:
                 print(f"Not satisfiable for k={self.k}")             
-                self.k += 1   
+                self.k += 1 
+        return -1,""
 
     def printVariables(self):
         if self.solver.get_model():
