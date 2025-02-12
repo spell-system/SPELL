@@ -1,24 +1,13 @@
-import time
-from enum import Enum
-from typing import NamedTuple, Union
+from typing import Union
 from asciitree import LeftAligned
 from asciitree.drawing import BoxStyle, Style
 from collections import OrderedDict as OD
 
-
-from pysat.card import CardEnc, EncType
-from pysat.solvers import Glucose4, pysolvers
+from pysat.solvers import Glucose4 
 
 from .structures import (
-    Signature,
     Structure,
-    conceptname_ext,
-    conceptnames,
-    generate_all_trees,
-    ind,
     restrict_to_neighborhood,
-    rolenames,
-    solution2sparql,
 )
 
 from .fitting import (
@@ -62,10 +51,8 @@ ALL = 6
 ALC_OP = {NEG,AND,OR,EX,ALL}
 ALC_OP_B = {NEG,AND,OR}
 X = 0
-Y = 1
-Z = 2
-U = 3
-V = 4
+Z = 1
+V = 2
 
 class STreeNode():
     def __init__(self, node, children):
@@ -100,6 +87,8 @@ class FittingALC:
         self.sigma = determine_relevant_symbols(A, P, 1, k - 1, N)
         self.k = k
         self.op = op
+
+        print("A {} P {} N {} CNs {} RNs {} k {}".format(self.A.max_ind, len(self.P), len(self.N), len(self.sigma[0]), len(self.sigma[1]), k))
         self.op_b = ALC_OP_B.intersection(op)
         self.op_r = op.difference(ALC_OP_B)
         self.tree_node_symbols = dict()
@@ -136,22 +125,9 @@ class FittingALC:
                 d[X,ALL,c] = i * self.k+1
                 self.tree_node_symbols[i * self.k+1] = f"all.{c}"
                 i+=1
-        for l in range(self.k):
-            d[Y,l] = i * self.k+1
-            i +=1
         for a in range(self.A.max_ind):
             d[Z,a] = i * self.k+1
             i += 1
-        for op in self.op_b:
-            for j in range(self.k):
-                for a in range(self.A.max_ind):
-                    d[U,op,j,a] = i * self.k+1
-                    i+=1
-        for op in self.op_r:
-            for j in range(self.k):
-                for a in range(self.A.max_ind):
-                    d[U,op,j,a] = i*self.k+1
-                    i+=1
         for j in range(self.k):
             d[V,1,j] = i*self.k+1
             i+=1
@@ -159,10 +135,6 @@ class FittingALC:
             d[V,2,j] = i*self.k+1
             i+=1
         return d
-
-    def _root(self):
-        for j in range(1,self.k):
-            self.solver.add_clause([-self.vars[Y,j]])
 
     def _syn_tree_encoding(self):
         for i in range(self.k):            
@@ -175,7 +147,6 @@ class FittingALC:
 
         for i in range(self.k):
             v_vars = [self.vars[V, 1, i] + j for j in range(i + 1, self.k)] + [self.vars[V, 2, i] + j for j in range(i + 1, self.k)]
-
             # At most one of the y-vars
             for v1 in v_vars:
                 for v2 in v_vars:
@@ -269,7 +240,6 @@ class FittingALC:
             self.solver.add_clause([-(self.vars[Z,a])])            
 
     def solve(self):
-        #self._root()
         self._syn_tree_encoding()
         self._evaluation_constraints()
         self._fitting_constraints()               
@@ -313,28 +283,31 @@ class FittingALC:
                             print((d_var_names[k[0]],d_op[k[1]],v+i), f"Tree Node: {(v+i-1)%self.k }",s)
                         except KeyError:
                             print((d_var_names[k[0]],k[1],v+i), f"Tree Node: {(v+i-1)%self.k }",s)
-                    elif k[0] == U:
-                        print((d_var_names[k[0]],d_op[k[1]],f"domain element: {k[2]}",f"edge: ({k[3]},{i})",v+i),s)                
                     elif k[0] == V:
                         print((d_var_names[k[0]],k[1:],f"edge: ({k[2]},{i})",v+i),s)
                     else:
                         print((d_var_names[k[0]],k[1:],v+i),s)
-                    if k[0] == Y:
-                        print((d_var_names[k[0]],k[1:],v+i),s)
         
     def _modelToTree(self):
         m = self.solver.get_model()
-        xv = sorted(list(filter(lambda x : x> 0, m[:self.vars[Y,0]-1])),key = lambda i : (i-1)%self.k)                
         edges = {i : [] for i in range(self.k)}
         x_symbols = [None] * self.k
-        for x in m[:self.vars[Y,0]-1]:
+
+        for x in m[:self.vars[Z,0]-1]:
             if x>0:
                 i = (x-1)%(self.k)                
                 x_symbols[i] = self.tree_node_symbols[x - i]
-                for y in m[self.vars[Y,0]-1 + (i*self.k): self.vars[Y,0]-1 + (i*self.k) + self.k]:                
-                    if y > 0:
-                        j = ((y-1)%(self.k))
-                        edges[i].append(j)                
+
+        for i in range(self.k):
+            for j in range(i + 1, self.k):
+                if (self.vars[V, 1, i] + j) in m:
+                    edges[i].append(j)
+                elif (self.vars[V, 2, i] + j) in m:
+                    edges[i].append(j)
+                    edges[i].append(j + 1)
+
+        print(x_symbols)
+        print(edges)
         edges_labeled = { (k,x_symbols[k]) : list(map(lambda x : (x,x_symbols[x]), v)) for k,v in edges.items() }        
         t = STreeNode.FromDict(edges_labeled,(0,x_symbols[0]))        
         return t.to_asciitree()
