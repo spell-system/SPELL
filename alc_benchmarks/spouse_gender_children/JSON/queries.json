@@ -1,0 +1,57 @@
+{
+    "Q1" : {
+        "SPARQL" : "SELECT DISTINCT ?0 WHERE { ?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>. FILTER NOT EXISTS { ?0 <http://schema.org/children> ?3. FILTER NOT EXISTS { ?3 <http://schema.org/gender> ?4. ?4 a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.}}}",
+        "description" : "Individuals with only female children.",
+        "depth" : 3
+    },
+    "Q2" : {
+        "SPARQL" : "SELECT DISTINCT ?0 WHERE { ?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>. ?0 <http://schema.org/children> ?2. FILTER NOT EXISTS { ?0 <http://schema.org/children> ?3. FILTER NOT EXISTS { ?3 <http://schema.org/gender> ?4. ?4 a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.  } } }",
+        "description" : "Individuals who have at least one child and only female children",
+        "depth" : 3
+    }, 
+    "Q3" : {
+        "SPARQL" : "SELECT DISTINCT ?0 WHERE {{?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>. FILTER NOT EXISTS {?0 <http://schema.org/children> ?3. FILTER NOT EXISTS {?3 <http://schema.org/gender> ?4. ?4 a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.}}} UNION {?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>. FILTER NOT EXISTS {?0 <http://schema.org/children> ?3. FILTER NOT EXISTS {?3 <http://schema.org/gender> ?4. ?4 a <http://yago-knowledge.org/resource/Male_gender_class>.}}}}",
+        "description" : "Individuals with only female children or only male children.",
+        "depth" : 3
+    },
+    "Q4" : {
+        "SPARQL" : "SELECT DISTINCT ?0 WHERE {?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>. ?0 <http://schema.org/children> ?1. ?1 <http://schema.org/gender> ?2. ?2 a <http://yago-knowledge.org/resource/Male_gender_class>.}",
+        "description": "Individuals who have at least one male child.",
+        "depth" : 3
+    },
+    "Q5" : {
+        "SPARQL" : "SELECT DISTINCT ?0 WHERE {?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>. ?0 <http://schema.org/children> ?1. ?1 <http://schema.org/gender> ?2. ?2 a <http://yago-knowledge.org/resource/Male_gender_class>. ?0 <http://schema.org/children> ?3. ?3 <http://schema.org/gender> ?4. ?4 a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>. }",
+        "description" : "Individuals who have at least one male child and at least one female child.",
+        "depth" : 3
+    },
+    "Q6" : {
+         "SPARQL": "SELECT DISTINCT ?0 WHERE { {?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>. ?0 <http://schema.org/children> ?5. ?5 <http://schema.org/gender> ?6. ?6 a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>. FILTER NOT EXISTS { ?0 <http://schema.org/children> ?3. FILTER NOT EXISTS { ?3 <http://schema.org/gender> ?4. ?4 a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>. } } } UNION {?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>. ?2 a <http://yago-knowledge.org/resource/Male_gender_class>. ?0 <http://schema.org/children> ?7. ?7 <http://schema.org/gender> ?8. ?8 a <http://yago-knowledge.org/resource/Male_gender_class>. FILTER NOT EXISTS { ?0 <http://schema.org/children> ?3. FILTER NOT EXISTS { ?3 <http://schema.org/gender> ?4. ?4 a <http://yago-knowledge.org/resource/Male_gender_class>. } } } }",
+        "description" : "Individuals who have at least one female child and only female children or who have at least one male child and only male children.",
+        "depth" : 3
+    },
+    "Q7" : {
+        "SPARQL" : "SELECT DISTINCT ?0 WHERE { ?0 a <http://www.w3.org/2002/07/owl#NamedIndividual>. FILTER NOT EXISTS { ?0 <http://schema.org/children> ?3. }}",
+        "description" : "Individuals who have no children.",
+        "depth" : 1
+    },
+    "Q10" : {
+        "SPARQL" : "SELECT DISTINCT ?0 WHERE {?0 <http://schema.org/children> ?1.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.}",
+        "description" : "Individuals who have a child that is male and only has male children, a child that is male and only has female children, a child that is female and only has male children and a child that is female and only has female children.",
+        "depth" : 5
+    },
+    "Q11" : {
+        "SPARQL" : "SELECT DISTINCT ?0 WHERE {{?0 <http://schema.org/children> ?1.FILTER NOT EXISTS {?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.}?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.} UNION {{?0 <http://schema.org/children> ?1.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.FILTER NOT EXISTS {?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.}?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.} UNION {{?0 <http://schema.org/children> ?1.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.FILTER NOT EXISTS {?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.}?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.} UNION {?0 <http://schema.org/children> ?1.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Male_gender_class>.?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.FILTER NOT EXISTS {?0 <http://schema.org/children> ?1.?0  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.}}}}}",
+        "description" : "Individuals who do not satisfy one of the conjuncts in the outer conjunction of Q10.",
+        "depth" : 6
+    },
+    "Q12" : {
+        "SPARQL": "SELECT DISTINCT ?0 WHERE {?0  a <http://yago-knowledge.org/resource/Male_gender_class>.?0 <http://schema.org/children> ?1.?1 <http://schema.org/children> ?2.?2 <http://schema.org/children> ?3.?3 <http://schema.org/children> ?4.?4  a <http://yago-knowledge.org/resource/Male_gender_class>.?0 <http://schema.org/children> ?1.?1 <http://schema.org/children> ?2.?2 <http://schema.org/children> ?3.?3 <http://schema.org/children> ?4.?4  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.}",
+        "description" : "Greatgreatgrandfather who has at least one male 4-child and on female 4-child.",
+        "depth" : 6
+    },
+    "Q13" : {
+        "SPARQL": "SELECT DISTINCT ?0 WHERE {{FILTER NOT EXISTS {?0 <http://schema.org/children> ?1.?1 <http://schema.org/children> ?2.?2 <http://schema.org/children> ?3.?3 <http://schema.org/children> ?4.?4  a <http://yago-knowledge.org/resource/Male_gender_class>.}?0 <http://schema.org/children> ?1.?1 <http://schema.org/children> ?2.?2 <http://schema.org/children> ?3.?3 <http://schema.org/children> ?4.?4  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.} UNION {?0 <http://schema.org/children> ?1.?1 <http://schema.org/children> ?2.?2 <http://schema.org/children> ?3.?3 <http://schema.org/children> ?4.?4  a <http://yago-knowledge.org/resource/Male_gender_class>.FILTER NOT EXISTS {?0 <http://schema.org/children> ?1.?1 <http://schema.org/children> ?2.?2 <http://schema.org/children> ?3.?3 <http://schema.org/children> ?4.?4  a <http://yago-knowledge.org/resource/Female__u0028_gender_u0029__class>.}}}",
+        "description" : "Greatgreatgrandfather negative.",
+        "depth" : 7
+    }
+}
