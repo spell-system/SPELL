@@ -18,6 +18,11 @@ def print_element(element):
 
     print(lxml.etree.tostring(element, pretty_print=True).decode(), file=sys.stderr)
 
+def make_res_absolute(elem, res):
+    if res[0] == "#":
+        return elem.nsmap[None] + res[1:]
+    else:
+        return res
 
 class OWLReader(object):
     namespaces = {
@@ -119,6 +124,8 @@ class OWLReader(object):
         elif self.verbose >= severity:
             print("WARNING:", message, file=sys.stderr)
 
+
+
     def read(self):
         ontology = Ontology()
 
@@ -176,7 +183,7 @@ class OWLReader(object):
         assert len(children_not_rules) <= 1
 
         if identifier is not None:
-            subject = ClassIdentifier(identifier.strip("#"))
+            subject = ClassIdentifier(make_res_absolute(element, identifier))
             if children_not_rules:
                 children_rules.append(EquivalentClass(subject, children_not_rules[0]))
         else:
@@ -206,8 +213,8 @@ class OWLReader(object):
         bs = []
         try:
             attrib_ref = self.expand_namespace("rdf", "resource")
-            ref = element.attrib[attrib_ref]
-            bs.append(ClassIdentifier(ref.strip("#")))
+            ref = make_res_absolute(element, element.attrib[attrib_ref])
+            bs.append(ClassIdentifier(ref))
         except KeyError:
             pass
         for child in element:
@@ -221,8 +228,8 @@ class OWLReader(object):
         bs = []
         try:
             attrib_ref = self.expand_namespace("rdf", "resource")
-            ref = element.attrib[attrib_ref]
-            bs.append(ClassIdentifier(ref.strip("#")))
+            ref = make_res_absolute(element, element.attrib[attrib_ref])
+            bs.append(ClassIdentifier(ref))
         except KeyError:
             pass
         for child in element:
@@ -236,8 +243,8 @@ class OWLReader(object):
         bs = []
         try:
             attrib_ref = self.expand_namespace("rdf", "resource")
-            ref = element.attrib[attrib_ref]
-            bs.append(ClassIdentifier(ref.strip("#")))
+            ref = make_res_absolute(element, element.attrib[attrib_ref])
+            bs.append(ClassIdentifier(ref))
         except KeyError:
             pass
         for child in element:
@@ -268,7 +275,7 @@ class OWLReader(object):
         assert len(children_not_rules) <= 1
 
         if identifier is not None:
-            subject = ClassIdentifier(identifier.strip("#"))
+            subject = ClassIdentifier(make_res_absolute(element, identifier))
         else:
             assert len(children_not_rules) == 1
             subject = children_not_rules[0]
@@ -298,8 +305,8 @@ class OWLReader(object):
         bs = []
         try:
             attrib_ref = self.expand_namespace("rdf", "resource")
-            ref = element.attrib[attrib_ref]
-            bs.append(ClassIdentifier(ref.strip("#")))
+            ref = make_res_absolute(element, element.attrib[attrib_ref])
+            bs.append(ClassIdentifier(ref))
         except KeyError:
             pass
         for child in element:
@@ -336,7 +343,7 @@ class OWLReader(object):
 
         results = []
         try:
-            results.append(ClassIdentifier(element.attrib[rdf_resource].strip("#")))
+            results.append(ClassIdentifier(make_res_absolute(element, element.attrib[rdf_resource])))
         except KeyError:
             pass
 
@@ -361,7 +368,7 @@ class OWLReader(object):
 
         results = []
         try:
-            results.append(PropertyReference(element.attrib[rdf_resource].strip("#")))
+            results.append(PropertyReference(make_res_absolute(element, element.attrib[rdf_resource])))
         except KeyError:
             pass
 
@@ -390,7 +397,7 @@ class OWLReader(object):
             element, ("rdf", "about"), ("rdf", "ID"), (None, "IRI")
         )
         if identifier is not None:
-            identifier = identifier.strip("#")
+            identifier = make_res_absolute(element, identifier)
             # self.parse_error(5, element, 'No property identifier found!')
 
         rdf_resource = self.expand_namespace("rdf", "resource")
@@ -452,7 +459,7 @@ class OWLReader(object):
         rdf_resource = self.expand_namespace("rdf", "resource")
         results = []
         try:
-            results.append(PropertyReference(element.attrib[rdf_resource].strip("#")))
+            results.append(PropertyReference(make_res_absolute(element, element.attrib[rdf_resource])))
         except KeyError:
             pass
         for child in element:
@@ -535,7 +542,7 @@ class OWLReader(object):
                 raise RuntimeError("Value or class required!")
             identifier = options[0]
         else:
-            identifier = ClassIdentifier(identifier.strip("#"))
+            identifier = ClassIdentifier(make_res_absolute(element, identifier))
 
         return cls(identifier)
 
@@ -560,6 +567,7 @@ class OWLReader(object):
 
     def parse_quantifier_has_value(self, element):
         return self._parse_quantifier_from(element, HasValue)
+    
 
     def _one_of(self, element, *attrs):
         """

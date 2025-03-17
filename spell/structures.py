@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import functools
+from typing import Any
 
 from lxml import etree
 
@@ -143,6 +144,13 @@ attr_resource = expand_namespace("rdf", "resource")
 attr_about = expand_namespace("rdf", "about")
 attr_datatype = expand_namespace("rdf", "datatype")
 
+def make_res_absolute(nsmap: dict[Any, str], res: str) -> str:
+    if res[0] == "#":
+        assert None in nsmap
+        return nsmap[None] + res[1:]
+    else:
+        return res
+
 
 def load_owl(file: str):
     reader = o2p_owl_parser.OWLReader("")
@@ -164,11 +172,11 @@ def load_owl(file: str):
             nsmap = elem.nsmap
         if elem.tag == tag_class:
             if attr_about in elem.attrib:
-                abox.declare_cn(elem.attrib[attr_about])
+                abox.declare_cn(make_res_absolute(nsmap, elem.attrib[attr_about]))
             for r in reader.parse_rule(elem):
                 onto.add_rule(r)
         elif elem.tag == tag_object_prop:
-            abox.declare_rn(elem.attrib[attr_about])
+            abox.declare_rn(make_res_absolute(nsmap, elem.attrib[attr_about]))
             onto.add_property(reader.parse_property(elem))
             elem.clear()
         elif elem.tag == tag_data_prop:
@@ -181,6 +189,7 @@ def load_owl(file: str):
             or elem.tag == tag_thing
             or (attr_about in elem.attrib and elem.tag != tag_onto)
         ):
+            #TODO Individual names are not made absolute right now
             a = elem.attrib[attr_about]
             ind_idx = abox.map_ind(a)
 
@@ -197,8 +206,7 @@ def load_owl(file: str):
                     # TODO: handle complex concepts here
                     if attr_resource not in child.attrib:
                         continue
-                    conceptname = child.attrib[attr_resource]
-
+                    conceptname = make_res_absolute(nsmap, child.attrib[attr_resource])
                     facts += 1
                     abox.concept_assertion(ind_idx, conceptname)
                 elif attr_datatype in child.attrib:
@@ -206,6 +214,7 @@ def load_owl(file: str):
                     continue
                 elif attr_resource in child.attrib:
                     role = tag2name(child.tag)
+                    #TODO Individual names are not made absolute right now
                     other = child.attrib[attr_resource]
                     facts += 1
                     if role in abox.role_names:
@@ -523,7 +532,7 @@ def construct_normalized_tbox(onto: Ontology):
         )
 
     print(
-        "Loaded {} concept names, {} role names, {} concept inclusions".format(
+        "Loaded {} concept names, {} role names, {} concept inclusions".format(
             len(t.cns), len(t.rns), cis
         )
     )

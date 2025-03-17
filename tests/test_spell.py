@@ -596,6 +596,24 @@ def test_el_path5():
     assert fitting_of_size_exists(7, A, P, N)
 
 
+def test_el_path4_rel():
+    #This tests that ontologies that use relative resources can be parsed
+    A = structure_from_owl("tests/test-el-path-4-rel.owl")
+
+    P = [
+        "http://example.com/test#p1",
+        "http://example.com/test#p2",
+    ]
+
+    N = [
+        "http://example.com/test#n",
+    ]
+
+    assert fitting_exists(A, P, N)
+    assert not fitting_of_size_exists(5, A, P, N)
+    assert fitting_of_size_exists(6, A, P, N)
+
+
 def test_el_path4():
     A = structure_from_owl("tests/test-el-path-4.owl")
 
