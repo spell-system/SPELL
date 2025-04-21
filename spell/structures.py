@@ -189,8 +189,7 @@ def load_owl(file: str):
             or elem.tag == tag_thing
             or (attr_about in elem.attrib and elem.tag != tag_onto)
         ):
-            #TODO Individual names are not made absolute right now
-            a = elem.attrib[attr_about]
+            a = make_res_absolute(nsmap, elem.attrib[attr_about])
             ind_idx = abox.map_ind(a)
 
             if elem.tag != tag_ni and elem.tag != tag_thing:
@@ -214,8 +213,7 @@ def load_owl(file: str):
                     continue
                 elif attr_resource in child.attrib:
                     role = tag2name(child.tag)
-                    #TODO Individual names are not made absolute right now
-                    other = child.attrib[attr_resource]
+                    other = make_res_absolute(nsmap, child.attrib[attr_resource])
                     facts += 1
                     if role in abox.role_names:
                         abox.role_assertion(ind_idx, other, role)
