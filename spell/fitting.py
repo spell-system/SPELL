@@ -340,9 +340,8 @@ def create_coverage_formula(
         lits = [-simul[0][b] for b in N]
 
         bound = max(coverage - len(P), 1)
-        # TODO maybe switch to incremental totalizer encoding or another incremental encoding
         enc = CardEnc.atleast(
-            lits, bound=bound, top_id=var_counter, encoding=EncType.totalizer
+            lits, bound=bound, top_id=var_counter, encoding=EncType.kmtotalizer
         )
 
         var_counter = enc.nv + 1
@@ -351,9 +350,8 @@ def create_coverage_formula(
     else:
         lits = [simul[0][a] for a in P] + [-simul[0][b] for b in N]
 
-        # TODO maybe switch to incremental totalizer encoding or another incremental encoding
         enc = CardEnc.atleast(
-            lits, bound=coverage, top_id=var_counter, encoding=EncType.totalizer
+            lits, bound=coverage, top_id=var_counter, encoding=EncType.kmtotalizer
         )
 
         var_counter = enc.nv + 1
